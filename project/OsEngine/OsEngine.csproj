@@ -556,7 +556,6 @@
     <Compile Include="Market\Servers\BingX\BingXSpot\Entity\ListenKeyBingX.cs" />
     <Compile Include="Market\Servers\BingX\BingXSpot\Entity\ResponceWebSocketBingXMessage.cs" />
     <Compile Include="Market\Servers\BingX\BingXSpot\Entity\ResponseSpotBingX.cs" />
-    <Compile Include="Market\Servers\Bitfinex\BitfinexClient.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfinexServer.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitFinexServerPermission.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\BitfinexOrder.cs" />
@@ -566,6 +565,18 @@
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\JsonConverter.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\NewOrderPayload.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\SubscriptionInformation.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexBook.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexCandlesHistory.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexMarketDepthMessage.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexMyTrade.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexOrder.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexPortfolioRest.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexPortfolioSocket.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexQuotes.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexResponceWebSocket.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSecurity.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSoketMessageBase.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\Security1.cs" />
     <Compile Include="Market\Servers\BitGet\BitGetFutures\BitGetFuturesServerPermission.cs" />
     <Compile Include="Market\Servers\BitGet\BitGetFutures\BitGetServerFutures.cs" />
     <Compile Include="Market\Servers\BitGet\BitGetFutures\Entity\RequestWebsocketAuth.cs" />
@@ -1911,6 +1922,7 @@
     <Resource Include="Images\MainWIndow\alor1.png" />
     <Resource Include="Images\MainWIndow\alor2.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets" Condition="Exists('..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

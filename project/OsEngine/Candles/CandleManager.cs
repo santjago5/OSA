@@ -608,7 +608,7 @@ namespace OsEngine.Entity
             }
             catch (Exception error)
             {
-                //SendLogMessage(error.ToString(), LogMessageType.Error);
+                SendLogMessage(error.ToString(), LogMessageType.Error);
             }
         }
 

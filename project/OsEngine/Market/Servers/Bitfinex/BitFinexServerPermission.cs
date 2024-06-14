@@ -45,7 +45,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         }
         public bool DataFeedTf2MinuteCanLoad
         {
-            get { return true; }
+            get { return false; }
         }
         public bool DataFeedTf5MinuteCanLoad
         {
@@ -69,11 +69,11 @@ namespace OsEngine.Market.Servers.Bitfinex
         }
         public bool DataFeedTf2HourCanLoad
         {
-            get { return true; }
+            get { return false; }
         }
         public bool DataFeedTf4HourCanLoad
         {
-            get { return true; }
+            get { return false; }
         }
         public bool DataFeedTfTickCanLoad
         {
@@ -140,7 +140,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public bool UseStandartCandlesStarter
         {
-            get { return false; }
+            get { return true; }
         }
 
         public bool IsUseLotToCalculateProfit

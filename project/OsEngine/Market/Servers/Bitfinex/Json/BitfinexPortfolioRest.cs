@@ -1,0 +1,75 @@
+﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace OsEngine.Market.Servers.Bitfinex.Json
+{
+    //POST https://api.bitfinex.com/v2/auth/r/wallets
+    public class BitfinexPortfolioRest
+    {
+        [JsonProperty("TYPE")]
+        public string PortfolioName { get; set; }    //EXCHANGE, MARGIN, FUNDING //TYPE
+
+        [JsonProperty("CURRENCY")]
+        public string Currency { get; set; } //"UST", //CURRENCY
+
+        [JsonProperty("BALANCE")]
+        public decimal Balance { get; set; } //19788.6529257, //BALANCE
+
+        [JsonProperty("UNSETTLED_INTEREST")]
+        public decimal UnsettledInterest { get; set; } //	0, //UNSETTLED_INTEREST
+
+        [JsonProperty("AVAILABLE_BALANCE")]
+        public decimal AvailableBalance { get; set; }    //19788.6529257, //AVAILABLE_BALANCE
+
+        [JsonProperty("LAST_CHANGE")]
+        public string LastChange { get; set; }//"Exchange 2.0 UST for USD @ 11.696", 
+
+    }
+
+    public class BitfinexWallet
+    {
+        public BitfinexPortfolioRest[] balances { get; set; }
+    }
+}
+
+
+//[
+//  [
+//  	"exchange", //TYPE
+//  	"UST", //CURRENCY
+//  	19788.6529257, //BALANCE
+//  	0, //UNSETTLED_INTEREST
+//  	19788.6529257, //AVAILABLE_BALANCE
+//  	"Exchange 2.0 UST for USD @ 11.696", //LAST_CHANGE
+//  	{
+//  		reason: "TRADE",
+//          order_id: 1189740779,
+//          order_id_oppo: 1189785673,
+//          trade_price: "11.696",
+//          trade_amount: "-2.0",
+//          order_cid: 1598516362757,
+//          order_gid: 1598516362629
+//  	} //TRADE_DETAILS
+//  ], //WALLET
+//  [...]
+//]
+
+
+//"Exchange 2.0 UST for USD @ 11.696", //LAST_CHANGE
+//{
+//	reason: "TRADE",
+//	order_id: 1189740779,
+//	order_id_oppo: 1189785673,
+//	trade_price: "11.696",
+//	trade_amount: "-2.0",
+//	order_cid: 1598516362757,
+//	order_gid: 1598516362629
+//} //TRADE_DETAILS
+//  //WALLET
+
+
+
