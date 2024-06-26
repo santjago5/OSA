@@ -13,9 +13,9 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     public class BitfinexMarketDepth //Total amount available at that price level (if AMOUNT > 0 then bid else ask)
     {
 
-        //public decimal Price { get; set; }
-        //public decimal Count { get; set; }
-        //public decimal Amount { get; set; }
+        public decimal Price { get; set; }
+        public decimal Count { get; set; }
+        public decimal Amount { get; set; }
 
 
         public List<List<string>> asks;
