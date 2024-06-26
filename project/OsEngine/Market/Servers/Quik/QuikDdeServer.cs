@@ -1198,6 +1198,11 @@ namespace OsEngine.Market.Servers.Quik
             throw new NotImplementedException();
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// send exeptions
         /// отправляет исключения

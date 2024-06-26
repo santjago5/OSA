@@ -848,5 +848,10 @@ namespace OsEngine.Market.Servers.MOEX
         {
             throw new NotImplementedException();
         }
+
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

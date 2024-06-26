@@ -479,6 +479,11 @@ namespace OsEngine.Market.Servers.BitStamp
             throw new NotImplementedException();
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// outgoing log message
         /// исходящее сообщение для лога

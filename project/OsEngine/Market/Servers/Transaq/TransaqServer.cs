@@ -2164,6 +2164,11 @@ namespace OsEngine.Market.Servers.Transaq
             }
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         public event Action<string, LogMessageType> LogMessageEvent;
 
         #endregion

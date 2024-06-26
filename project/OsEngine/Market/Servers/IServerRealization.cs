@@ -188,6 +188,7 @@ namespace OsEngine.Market.Servers
         /// Query order status
         /// </summary>
         void GetOrderStatus(Order order);
+        List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime);
 
         /// <summary>
         /// новые мои ордера

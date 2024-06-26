@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace OsEngine.Market.Servers.Bitfinex.Json
 {
     //POST https://api.bitfinex.com/v2/auth/r/trades/hist
-   public class BitfinexQuotes
+   public class BitfinexTrades
     {
         [JsonProperty("ID")]
         public string id;       //402088407

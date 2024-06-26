@@ -2056,6 +2056,11 @@ namespace OsEngine.Market.Servers.HTX.Swap
             LogMessageEvent(message, messageType);
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }

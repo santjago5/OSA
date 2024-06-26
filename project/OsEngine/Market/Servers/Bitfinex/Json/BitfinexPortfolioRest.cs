@@ -34,6 +34,17 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     {
         public BitfinexPortfolioRest[] balances { get; set; }
     }
+
+
+    public enum BitfinexExchangeType
+    {
+        SpotExchange,
+        FuturesExchange,
+        MarginExchange
+    }
+
+
+
 }
 
 

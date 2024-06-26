@@ -853,6 +853,11 @@ namespace OsEngine.Market.Servers.Hitbtc
             throw new NotImplementedException();
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         internal class OrderCoupler
         {
             public int OsOrderNumberUser;

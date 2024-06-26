@@ -1772,6 +1772,11 @@ namespace OsEngine.Market.Servers.BingX.BingXFutures
             return Guid.NewGuid().ToString();
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }

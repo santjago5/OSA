@@ -16,6 +16,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string msg { get; set; }
         public string topic { get; set; }
         public T data { get; set; }
+        public string symbol;
 
         [JsonProperty("STATUS")]
         public string status { get; set; }//SUCCESS, ERROR, FAILURE, .

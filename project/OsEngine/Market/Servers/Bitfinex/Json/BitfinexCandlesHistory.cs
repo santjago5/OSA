@@ -20,22 +20,22 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         // Response with section="last" OR  Response with section="hist"
 
         [JsonProperty("MTS")]
-        public string Time;              //1678465320000 //MTS 
+        public string Time { get; set; }           //1678465320000 //MTS 
 
         [JsonProperty("OPEN")]
-        public string Open;             //20097 //OPEN
+        public string Open { get; set; }        //20097 //OPEN
 
         [JsonProperty("CLOSE")]
-        public string Close;            //20094 //CLOSE
+        public string Close { get; set; }         //20094 //CLOSE
 
         [JsonProperty("HIGH")]
-        public string High;             //20097 //HIGH
+        public string High { get; set; }            //20097 //HIGH
 
         [JsonProperty("LOW")]
-        public string Low;              //20094 //LOW
+        public string Low { get; set; }           //20094 //LOW
 
         [JsonProperty("VOLUME")]
-        public string Volume;           //0.07870586 //VOLUME
+        public string Volume { get; set; }          //0.07870586 //VOLUME
 
     }
 }

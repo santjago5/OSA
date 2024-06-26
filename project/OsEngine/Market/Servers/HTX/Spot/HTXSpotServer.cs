@@ -1955,6 +1955,11 @@ namespace OsEngine.Market.Servers.HTX.Spot
             LogMessageEvent(message, messageType);
         }
 
+        public List<Candle> GetCandleDataToSecurity(string security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }
