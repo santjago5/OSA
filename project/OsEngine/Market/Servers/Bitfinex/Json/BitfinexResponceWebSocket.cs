@@ -16,7 +16,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string msg { get; set; }
         public string topic { get; set; }
         public T data { get; set; }
-        public string symbol;
+       
 
         [JsonProperty("STATUS")]
         public string status { get; set; }//SUCCESS, ERROR, FAILURE, .
@@ -50,21 +50,44 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
 
 
-    public class BitfinexResponceWebSocketBooks
-    {
-        public string @event { get; set; }
-        public string channel { get; set; }
-        public string chanId { get; set; }
-        public string symbol { get; set; }
-        public string prec { get; set; }
-        public string freq { get; set; }
-        public string len { get; set; }
-        public string subId { get; set; }
-        public string pair { get; set; }
+    //public class BitfinexResponceWebSocketBooks
+    //{
+    //    public string @event { get; set; }
+    //    public string channel { get; set; }
+    //    public string chanId { get; set; }
+    //    public string symbol { get; set; }
+    //    public string prec { get; set; }
+    //    public string freq { get; set; }
+    //    public string len { get; set; }
+    //    public string subId { get; set; }
+    //    public string pair { get; set; }
 
+    //    // "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
+    //}
+
+
+    public class BitfinexResponceWebSocketDepth
+    {
+        [JsonProperty("event")]
+        public string Event { get; set; }
+        [JsonProperty("channel")]
+        public string Channel { get; set; }
+        [JsonProperty("chanId")]
+        public int ChannelId { get; set; }
+        [JsonProperty("symbol")]
+        public string Symbol { get; set; }
+        [JsonProperty("prec")]
+        public string Precision { get; set; }
+        [JsonProperty("freq")]
+        public string Frequency { get; set; }
+        [JsonProperty("len")]
+        public string Length { get; set; }
+        [JsonProperty("subId")]
+        public int SubscriptionId { get; set; }
+        [JsonProperty("pair")]
+        public string Pair { get; set; }
         // "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
     }
-
 
 
     public class BitfinexResponceWebSocketCandles

@@ -13,12 +13,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
 
 
-    public class bitf
-    {
-        // public List<List<BitfinexSecurity>> MyArray { get; set; }
-        // public List<BitfinexSecurity> MyArray { get; set; }
-        public BitfinexSecurity[] bitfinexSecurities { get; set; }
-    }
+
 
 
     public class BitfinexSecurity/*: List<BitfinexSecurity>*/

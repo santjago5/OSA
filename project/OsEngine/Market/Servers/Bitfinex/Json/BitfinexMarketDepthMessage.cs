@@ -16,11 +16,10 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Price { get; set; }
         public string Count { get; set; }
         public string Amount { get; set; }
-
-    }
-
-    public class MarketDepth
-    {
+  
+   }
+    public class BitfMarketDepth
+        {
         public List<string> asks;
         public List<string> bids;
 
@@ -28,13 +27,6 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
   
 }
 
-//public class ResponseWebSocketDepthItem
-//{
-//    public string symbol { get; set; }
-//    public long time { get; set; }
-//    public List<List<string>> asks { get; set; }
-//    public List<List<string>> bids { get; set; }
-//}
 //public class BitfinexMarketDepth //Total amount available at that price level (if AMOUNT > 0 then bid else ask)
 //{
 //    [JsonProperty("SYMBOL")]
@@ -49,7 +41,5 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 //    [JsonProperty("MTS")]
 //    public string time { get; set; }
 
-//    public List<string[]> bids;
-//    public List<string[]> asks;
 
 //}
