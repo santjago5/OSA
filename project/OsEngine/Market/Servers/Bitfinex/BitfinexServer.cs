@@ -1398,8 +1398,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                 ////tiker websocket-event: "subscribe", channel: "ticker",symbol: SYMBOL 
                 _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"ticker\",\"symbol\":{security.Name}\"}}");
 
-                ////trade websocket//event: "subscribe", channel: "trades", symbol: SYMBOL
-                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":{security.Name}\"}}");
 
                 ////candle websocket  //event: "subscribe",//channel: "candles", //key: "trade:1m:tBTCUSD"
                 _webSocketPublic.Send($"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:1m:{security.Name}\"}}");
@@ -1409,6 +1407,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                 //  _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"{security.Name}\",\"prec\":\"P0\",\"freq\":\"F0\",\"len\":\"25\",\"subId\": 123\"}}");
 
 
+                ////trade websocket//event: "subscribe", channel: "trades", symbol: SYMBOL
+                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":{security.Name}\"}}");
+
+
+              
 
 
 
@@ -1503,45 +1506,18 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     if (message.Contains("book"))
                     {
-                        //var subscriptionResponse = message;// = JsonConvert.DeserializeObject<BitfinexResponceWebSocketDepth>(message);
-                        // var temp = (BitfinexResponceWebSocketDepth)JsonConvert.DeserializeObject(message, typeof(BitfinexResponceWebSocketDepth));
-
                         UpdateDepth(message);
-                        //   GetDepth();
-                        //UpdateDepth1(message);
-                        // UpdateDepth(message);
-                        //UpdateDepth(GetDepth(message));
-
                     }
 
 
-                    ////////////////////////////////////////////////////////////////////////
-                    //if (WebSocketPublicMessage.Contains("book"))
-                    //if (message.Contains("book"))
-                    //{
-                    //   GetDepth("tLTCUSD","P0");///////////////
-                    //    //UpdateDepth(message);
-
-                    //    continue;
-                    //}
-                    /////////////////////////////////////////////////
-                    ///
-                    //var stream = JsonConvert.DeserializeObject<BitfinexResponseWebSocketMessage<object>>(message);
-                    //if (stream.topic != null && stream.data != null)
-                    //{
-                    //    if (message.Contains("book"))
-                    //    {
-                    //        UpdateDepth(message);
-                    //        continue;
-                    //    }
-                    //    if (message.Contains("trades"))
-                    //    {
-                    //        UpdateTrade(message);
-                    //        continue;
-                    //    }
-                    //}
-                    ///////////////////////////////////////////
+                    if (message.Contains("trades"))
+                    {
+                        UpdateTrade(message);
+                        continue;
+                    }
                 }
+                   
+                
                 catch (Exception exception)
                 {
                     Thread.Sleep(5000);
@@ -1732,6 +1708,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         Price = depthItem[0].ToString(),
                         Count = depthItem[1].ToString(),
                         Amount = depthItem[2].ToString()
+                     
                     };
 
                     marketDepths.Add(newMarketDepth);
@@ -1756,12 +1733,15 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 if (amount > 0)
                 {
-                    marketDepth.Bids.Add(new MarketDepthLevel
-                    {
-                        Price = price,
-                        Bid = count
-                    });
+                        marketDepth.Bids.Add(new MarketDepthLevel
+                        {
+                            Price = price,
+                            Bid = count
+                           
+                        }) ; 
+              
                 }
+                      
                 else
                 {
                     marketDepth.Asks.Add(new MarketDepthLevel
