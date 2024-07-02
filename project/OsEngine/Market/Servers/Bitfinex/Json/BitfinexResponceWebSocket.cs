@@ -9,45 +9,76 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 {
 
 
-    public class BitfinexResponseWebSocketMessage<T>
-    {
-
-        public string code { get; set; }
-        public string msg { get; set; }
-        public string topic { get; set; }
-        public T data { get; set; }
-       
-
-        [JsonProperty("STATUS")]
-        public string status { get; set; }//SUCCESS, ERROR, FAILURE, .
-        public string TEXT { get; set; }
-       
-
-    }
+   
 
 
   
     public class BitfinexResponceWebSocketTicker
     {
-        public string @event { get; set; }
-        public string channel { get; set; }
-        public string chanId { get; set; }
-        public string symbol { get; set; }
-        public string pair { get; set; }
+        public string Event { get; set; }
+        public string Channel { get; set; }
+        public string ChanId { get; set; }
+        public string Symbol { get; set; }
+        public string Pair { get; set; }
 
         //"event":"subscribed","channel":"ticker","chanId":224555,"symbol":"tBTCUSD","pair":"BTCUSD"
     }
 
-    public class BitfinexResponceWebSocketTrades
+ 
+    public class BitfinexResponceWebSocketMyTrades//BitfinexTrade
     {
-        public string @event { get; set; }
-        public string channel { get; set; }
-        public string chanId { get; set; }
-        public string symbol { get; set; }
-        public string pair { get; set; }
-
-        //"event":"subscribed","channel":"trades","chanId":19111,"symbol":"tBTCUSD","pair":"BTCUSD"
+        public string Id { get; set; }
+        public string Symbol { get; set; }
+        public string Timestamp { get; set; }
+        public string OrderId { get; set; }
+        public string Amount { get; set; }
+        public string Price { get; set; }
+        public string OrderType { get; set; }
+        public string OrderPrice { get; set; }
+        public string Maker { get; set; }
+        public string Fee { get; set; }  // Nullable for 'te' events
+        public string FeeCurrency { get; set; }  // Nullable for 'te' events
+        public string ClientOrderId { get; set; }
     }
+
+    public class BitfinexWebSocketMyTradeMessage
+    {
+        public string ChannelId { get; set; }
+        public string MsgType { get; set; }
+        public List<object> TradeArray { get; set; }
+    }
+
+
+
+    public class BitfinexResponseTrade
+    {
+        public string Event { get; set; }
+        public string Channel { get; set; }
+        public string ChanId { get; set; }
+        public string Symbol { get; set; }
+        public string Pair { get; set; }
+    }
+
+    public class BitfinexTradeMessage
+    {
+        public string ChannelId { get; set; }
+        public string MsgType { get; set; }
+        public List<object> TradeArray { get; set; }
+    }
+
+    public class BitfinexTrade
+    {
+        public string Id { get; set; }
+        public string Timestamp { get; set; }
+        public string Amount { get; set; }
+        public decimal Price { get; set; }
+    }
+
+
+
+
+
+
 
 
     //public class BitfinexResponceWebSocketBooks
@@ -66,28 +97,74 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     //}
 
 
+    public class BitfinexResponseDepth
+    {
+        public string Event { get; set; }
+        public string Channel { get; set; }
+        public string ChanId { get; set; }
+        public string Symbol { get; set; }
+        public string Pair { get; set; }
+    }
+
+    public class BitfinexBookEntry
+    {
+        public decimal Price { get; set; }
+        public int Count { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+    public class BitfinexBookSnapshot
+    {
+        public int ChannelId { get; set; }
+        public List<BitfinexBookEntry> BookEntries { get; set; }
+    }
+
+    public class BitfinexBookUpdate
+    {
+        public int ChannelId { get; set; }
+        public BitfinexBookEntry BookEntry { get; set; }
+    }
+
+
+
     public class BitfinexResponceWebSocketDepth
     {
-        [JsonProperty("event")]
+      
         public string Event { get; set; }
-        [JsonProperty("channel")]
         public string Channel { get; set; }
-        [JsonProperty("chanId")]
         public int ChannelId { get; set; }
-        [JsonProperty("symbol")]
         public string Symbol { get; set; }
-        [JsonProperty("prec")]
-        public string Precision { get; set; }
-        [JsonProperty("freq")]
-        public string Frequency { get; set; }
-        [JsonProperty("len")]
+        public string Precision { get; set; }      
+        public string Frequency { get; set; }  
         public string Length { get; set; }
-        [JsonProperty("subId")]
-        public int SubscriptionId { get; set; }
-        [JsonProperty("pair")]
+        public int SubscriptionId { get; set; }     
         public string Pair { get; set; }
         // "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
     }
+
+
+    //public class BitfinexResponceWebSocketDepth
+    //{
+    //    [JsonProperty("event")]
+    //    public string Event { get; set; }
+    //    [JsonProperty("channel")]
+    //    public string Channel { get; set; }
+    //    [JsonProperty("chanId")]
+    //    public int ChannelId { get; set; }
+    //    [JsonProperty("symbol")]
+    //    public string Symbol { get; set; }
+    //    [JsonProperty("prec")]
+    //    public string Precision { get; set; }
+    //    [JsonProperty("freq")]
+    //    public string Frequency { get; set; }
+    //    [JsonProperty("len")]
+    //    public string Length { get; set; }
+    //    [JsonProperty("subId")]
+    //    public int SubscriptionId { get; set; }
+    //    [JsonProperty("pair")]
+    //    public string Pair { get; set; }
+    //     "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
+    //}
 
 
     public class BitfinexResponceWebSocketCandles
