@@ -976,17 +976,17 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
 
             _socketPublicIsActive = true;//отвечает за соединение
-            var subscribeMessage = new
-            {
-                @event = "subscribe",
-                channel = "book",
-                symbol = "tBTCUSD",
-                prec = "P0",
-                freq = "F0",
-                len = "25"
-            };
-            string jsonMessage = JsonConvert.SerializeObject(subscribeMessage);
-            _webSocketPublic.Send(jsonMessage);
+            //var subscribeMessage = new
+            //{
+            //    @event = "subscribe",
+            //    channel = "book",
+            //    symbol = "tBTCUSD",
+            //    prec = "P0",
+            //    freq = "F0",
+            //    len = "25"
+            //};
+            //string jsonMessage = JsonConvert.SerializeObject(subscribeMessage);
+            //_webSocketPublic.Send(jsonMessage);
 
 
             CheckActivationSockets();
@@ -1064,15 +1064,25 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
+                if(e.Message.Contains("book"))
+                {
+
+                    ReceiveDepth(e.Message);
+                }
+
+
+
+                    if (e.Message.StartsWith("[") )
+                {
+                    MethodDepth(e); 
+                }
 
                 if (e.Message.StartsWith("event"))
                 {
                     return;
                 }
 
-
-
-                    if (WebSocketPublicMessage == null)
+                if (WebSocketPublicMessage == null)
                 {
                     return;
                 }
@@ -1082,10 +1092,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                MethodDepth(e);
+                
 
 
                 WebSocketPublicMessage.Enqueue(e.Message);
+
             }
             catch (Exception exception)
             {
@@ -1218,15 +1229,15 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                if (e == null)
+                if (e == null || string.IsNullOrEmpty(e.Message))
                 {
                     return;
                 }
 
-                if (string.IsNullOrEmpty(e.Message))
-                {
-                    return;
-                }
+                //if (string.IsNullOrEmpty(e.Message))
+                //{
+                //    return;
+                //}
                
 
                 if (e.Message.Contains("hb"))
@@ -1240,7 +1251,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     return;
                 }
-               
+
+
+
 
                 WebSocketPrivateMessage.Enqueue(e.Message); // Добавление полученного сообщения в очередь
 
@@ -1254,12 +1267,10 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        private static void MethodDepth(MessageReceivedEventArgs e)
+        private void ReceiveDepth(string message)
         {
-            
-            if (e.Message.Contains("book"))
-            {
-            BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(e.Message);
+
+            BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
 
             MarketDepth marketDepth = new MarketDepth();
 
@@ -1268,56 +1279,64 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             marketDepth.SecurityNameCode = responseDepth.Symbol;
 
-                try
+        }
+
+
+
+        private static void MethodDepth(MessageReceivedEventArgs e)
+        {
+
+            try
+            {
+                var token = JToken.Parse(e.Message);
+                // Если сообщение является объектом и содержит событие, то игнорируем его
+                if (token.Type == JTokenType.Object && token["event"] != null) return;
+
+                // Если сообщение является массивом и содержит heartbeat, то игнорируем его
+                if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
+
+                // Обработка остальных сообщений
+                ProcessMessage(token);
+                if (token is JArray parsedMessage && parsedMessage.Count > 1)
                 {
-                    var token = JToken.Parse(e.Message);
-                    // Если сообщение является объектом и содержит событие, то игнорируем его
-                    if (token.Type == JTokenType.Object && token["event"] != null) return;
+                    int channelId = parsedMessage[0].Value<int>();
 
-                    // Если сообщение является массивом и содержит heartbeat, то игнорируем его
-                    if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
-
-                    // Обработка остальных сообщений
-                    ProcessMessage(token);
-                    if (token is JArray parsedMessage && parsedMessage.Count > 1)
+                    if (parsedMessage[1] is JArray)
                     {
-                        int channelId = parsedMessage[0].Value<int>();
-
-                        if (parsedMessage[1] is JArray)
+                        Console.WriteLine("Received order book snapshot:");
+                        orderBookBids.Clear();
+                        orderBookAsks.Clear();
+                        JArray orderBookEntries = (JArray)parsedMessage[1];
+                        for (int i = 0; i < orderBookEntries.Count; i++)
                         {
-                            Console.WriteLine("Received order book snapshot:");
-                            orderBookBids.Clear();
-                            orderBookAsks.Clear();
-                            JArray orderBookEntries = (JArray)parsedMessage[1];
-                            for (int i = 0; i < orderBookEntries.Count; i++)
-                            {
-                                var entry = orderBookEntries[i].ToObject<List<decimal>>();
-                                ProcessOrderBookEntry(entry);
-                            }
-
-
-                            //foreach (var item in parsedMessage[1])
-                            //{
-                            //    var entry = item.ToObject<List<decimal>>();
-                            //    ProcessOrderBookEntry(entry);
-                            //}
-
-
-                        }
-                        else if (parsedMessage.Count == 3)
-                        {
-                            var entry = parsedMessage.ToObject<List<decimal>>();
+                            var entry = orderBookEntries[i].ToObject<List<decimal>>();
                             ProcessOrderBookEntry(entry);
-
                         }
+
+
+                        //foreach (var item in parsedMessage[1])
+                        //{
+                        //    var entry = item.ToObject<List<decimal>>();
+                        //    ProcessOrderBookEntry(entry);
+                        //}
+
+
+                    }
+                    else if (parsedMessage.Count == 3)
+                    {
+                        var entry = parsedMessage.ToObject<List<decimal>>();
+                        ProcessOrderBookEntry(entry);
+
                     }
                 }
-                catch (JsonException jsonEx)
-                {
-                    Console.WriteLine("Failed to parse JSON message: " + jsonEx.Message);
-                }
+
             }
-        }
+            catch (JsonException jsonEx)
+            {
+                Console.WriteLine("Failed to parse JSON message: " + jsonEx.Message);
+            }
+            }
+        
 
             private static void ProcessMessage(JToken token)
             {
@@ -1326,7 +1345,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             private static void ProcessOrderBookEntry(List<decimal> entry)
             {
-                if (entry.Count == 3)
+            if (entry.Count == 3) //должно быть  3
                 {
                     var order = new BitfinexBookEntry
                     {
@@ -1511,11 +1530,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                 //_webSocketPublic.Send($"{{\"event\":\"auth\",\"apiKey\":\"{_publicKey}\",\"authSig\":{signature}\",\"authPayload\":\"{ payload}\",\" authNonce\":{authNonce}\",\"calc\": 1\"}}"); 
 
                 ////tiker websocket-event: "subscribe", channel: "ticker",symbol: SYMBOL 
-                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"ticker\",\"symbol\":{security.Name}\"}}");
+               // _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"ticker\",\"symbol\":{security.Name}\"}}");
 
 
                 ////candle websocket  //event: "subscribe",//channel: "candles", //key: "trade:1m:tBTCUSD"
-                _webSocketPublic.Send($"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:1m:{security.Name}\"}}");
+               // _webSocketPublic.Send($"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:1m:{security.Name}\"}}");
 
                 // book websocket(стаканы ?)
                 _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"{security.Name}\",\"prec\":\"P0\",\"freq\":\"F0\"}}");
@@ -1609,7 +1628,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     string message;
 
-                    WebSocketPublicMessage.TryDequeue(out message);//[589390,[60970,0,1]]
+                    WebSocketPublicMessage.TryDequeue(out message);
 
                     if (message == null)
                     {
@@ -1618,25 +1637,12 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     if (message.Contains("hb"))
                     {
-                        string pong = $"{{\"event\": \"ping\", \"cid\": 1234}}";
-                        _webSocketPublic.Send(pong);
+                        //string pong = $"{{\"event\": \"ping\", \"cid\": 1234}}";
+                        //_webSocketPublic.Send(pong);
                         continue;
 
                     }
-                    
-                    if (message.Contains("book"))
-                        {
-
-                             //UpdateDepth(message);
-                             continue;
-                        }
-
-
-                        if (message.Contains("trades"))
-                        {
-                            //  UpdateTrade(message);
-                            continue;
-                        }
+                   
                     
                 }
 
