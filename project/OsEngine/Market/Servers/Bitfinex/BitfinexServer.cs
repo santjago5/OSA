@@ -1041,6 +1041,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+        private string _currentSymbol;
         private void WebSocketPublic_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
             try
@@ -1058,17 +1059,18 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (e.Message.Contains("book"))
                 {
 
+                    BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(e.Message);
 
+                    _currentSymbol = responseDepth.Symbol;
                     ReceiveDepth(e.Message);
                 }
 
-
-
                 if (e.Message.StartsWith("["))
                 {
-                    ProcessDepth(e.Message,"tBTCUSD");
+                    
+                 ProcessDepth(e.Message, _currentSymbol);
                 }
-
+                
                 if (e.Message.StartsWith("event"))
                 {
                     return;
@@ -1103,6 +1105,15 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void ReceiveDepth(string message)
         {
+            if(message==null) 
+            { 
+                return; 
+            }
+            if (string.IsNullOrEmpty(message)) 
+            { 
+                return; 
+            }
+            
             BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
             ProcessDepth(message, responseDepth.Symbol);
         }
@@ -1113,16 +1124,27 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 var token = JToken.Parse(message);
 
+                if (token.Type == JTokenType.Object && token["event"] != null) return;
+                if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
+
                 if (token is JArray parsedMessage && parsedMessage.Count > 1)
                 {
                     int channelId = parsedMessage[0].Value<int>();
 
-                    if (parsedMessage[1] is JArray orderBookEntries)
+
+                    if (parsedMessage[1] is JArray)
                     {
-                        foreach (var entry in orderBookEntries)
+
+                        orderBookBids.Clear();
+                        orderBookAsks.Clear();
+                        JArray orderBookEntries = (JArray)parsedMessage[1];
+
+                        for (int i = 0; i < orderBookEntries.Count; i++)
                         {
-                            var orderBookEntry = entry.ToObject<List<decimal>>();
-                            ProcessOrderBookEntry(orderBookEntry, symbol);
+                            var entry = orderBookEntries[i].ToObject<List<decimal>>();
+
+                            ProcessOrderBookEntry(entry,symbol);
+
                         }
                     }
                     else if (parsedMessage.Count == 2 && parsedMessage[1] is JArray singleEntryArray)
@@ -1148,6 +1170,37 @@ namespace OsEngine.Market.Servers.Bitfinex
                     Count = (int)entry[1],
                     Amount = entry[2]
                 };
+
+                if (order.Count == 0)
+                {
+                    if (order.Amount > 0)
+                    {
+                        if (orderBookBids.ContainsKey(order.Price))
+                        {
+                            orderBookBids.Remove(order.Price);
+                        }
+                    }
+                    else
+                    {
+                        if (orderBookAsks.ContainsKey(order.Price))
+                        {
+                            orderBookAsks.Remove(order.Price);
+                        }
+                    }
+                }
+                else
+                {
+                    if (order.Amount > 0)
+                    {
+                        orderBookBids[order.Price] = order;
+                    }
+                    else
+                    {
+                        order.Amount = Math.Abs(order.Amount);
+                        orderBookAsks[order.Price] = order;
+                    }
+                }
+
 
                 NewMethod6(order, symbol);
             }
@@ -1180,7 +1233,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 });
             }
 
-            MarketDepthEvent?.Invoke(newMarketDepth);
+            MarketDepthEvent?.Invoke(newMarketDepth.GetCopy());
         }
 
        
