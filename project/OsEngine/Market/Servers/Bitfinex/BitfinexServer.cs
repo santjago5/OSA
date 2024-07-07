@@ -1233,7 +1233,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 });
             }
 
-            MarketDepthEvent?.Invoke(newMarketDepth.GetCopy());
+            MarketDepthEvent?.Invoke(newMarketDepth/*.GetCopy()*/);
         }
 
        
@@ -1401,20 +1401,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
      
-        //public class DataProcessor
-        //{
-        //    public void ProcessData(BitfinexResponseDepth depthData)
-        //    {
-        //        // Доступ к данным через объект DepthData
-        //        string chanId = depthData.ChanId;
-        //        string channel = depthData.Channel;
-        //        string pair = depthData.Pair;
-        //        string symbol = depthData.Symbol;
-
-               
-        //        // Ваша логика обработки данных
-        //    }
-        //}
+        
 
         //private static void MethodDepth(MessageReceivedEventArgs e)
         //{
@@ -1538,82 +1525,6 @@ namespace OsEngine.Market.Servers.Bitfinex
 
        
 
-
-        //public class DepthProcessor
-        //{
-        //    public void ProcessDepth(string message, BitfinexBookEntry order)
-        //    {
-        //        // Получаем объект BitfinexResponseDepth из метода ReceiveDepth
-        //        BitfinexResponseDepth responseDepth = ReceiveDepth(message);
-
-        //        // Вызываем NewMethod6, передавая полученный объект
-        //        NewMethod6(order, responseDepth);
-        //    }
-
-        //    private BitfinexResponseDepth ReceiveDepth(string message)
-        //    {
-        //        BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
-        //        return responseDepth;
-        //    }
-
-        //    private static void NewMethod6(BitfinexBookEntry order, BitfinexResponseDepth responseDepth)
-        //    {
-        //        MarketDepth newMarketDepth = new MarketDepth
-        //        {
-        //            SecurityNameCode = responseDepth.Symbol,
-        //            Time = DateTime.UtcNow, //serverTime
-        //            Asks = new List<MarketDepthLevel>(),
-        //            Bids = new List<MarketDepthLevel>()
-        //        };
-
-        //        if (order.Amount > 0)
-        //        {
-        //            newMarketDepth.Bids.Add(new MarketDepthLevel
-        //            {
-        //                Price = order.Price,
-        //                Bid = order.Count
-        //            });
-        //        }
-        //        else
-        //        {
-        //            newMarketDepth.Asks.Add(new MarketDepthLevel
-        //            {
-        //                Price = order.Price,
-        //                Ask = Math.Abs(order.Amount)
-        //            });
-        //        }
-
-        //        MarketDepthEvent?.Invoke(newMarketDepth.GetCopy());
-        //    }
-
-        //    // Делегат и событие для MarketDepthEvent
-        //    public delegate void MarketDepthEventHandler(MarketDepth marketDepth);
-        //    public static event MarketDepthEventHandler MarketDepthEvent;
-        //}
-
-
-
-        ////private BitfinexResponseDepth ReceiveDepth(string message)
-        ////    {
-
-        ////        BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
-
-        ////        var Event = responseDepth.Event;
-        ////        var Channel = responseDepth.Channel;
-        ////        var ChanId = responseDepth.ChanId;
-        ////        var Symbol = responseDepth.Symbol;
-        ////        var Pair = responseDepth.Pair;
-
-        ////        // Создаем и возвращаем объект с данными
-        ////        return new BitfinexResponseDepth
-        ////        {
-        ////            Event = Event,
-        ////            ChanId = ChanId,
-        ////            Channel = Channel,
-        ////            Symbol = Symbol,
-        ////            Pair = Pair
-        ////        };
-        ////    }
 
 
 
