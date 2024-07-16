@@ -1130,13 +1130,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (token is JArray parsedMessage && parsedMessage.Count > 1)
                 {
                     int channelId = parsedMessage[0].Value<int>();
-
+                    
+                   
 
                     if (parsedMessage[1] is JArray)
                     {
 
-                        orderBookBids.Clear();
-                        orderBookAsks.Clear();
+                        //orderBookBids.Clear();
+                        //orderBookAsks.Clear();
                         JArray orderBookEntries = (JArray)parsedMessage[1];
 
                         for (int i = 0; i < orderBookEntries.Count; i++)
@@ -1208,13 +1209,40 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void NewMethod6(BitfinexBookEntry order, string symbol)
         {
+
+            if (_depths == null)
+            {
+                _depths = new List<MarketDepth>();///////////////
+            }
+
+            //MarketDepth needDepth = null;
+            //for (int i = 0; i < _depths.Count; i++)
+            //{
+            //    if (_depths[i].SecurityNameCode == symbol)////////////////
+            //    {
+            //        needDepth = _depths[i];
+            //        break;
+            //    }
+            //}
+
+            //if (needDepth == null)
+            //{
+            //    needDepth = new MarketDepth();
+            //    needDepth.SecurityNameCode = symbol;
+            //    _depths.Add(needDepth);
+            //}
+
+
+
+
             MarketDepth newMarketDepth = new MarketDepth
             {
-                SecurityNameCode = symbol,
+                SecurityNameCode = _currentSymbol,//symbol,
                 Time = DateTime.UtcNow, // serverTime
                 Asks = new List<MarketDepthLevel>(),
                 Bids = new List<MarketDepthLevel>()
             };
+           
 
             if (order.Amount > 0)
             {
