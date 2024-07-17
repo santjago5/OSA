@@ -82,14 +82,18 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             ServerStatus = ServerConnectStatus.Disconnect;
 
-            Thread threadForPublicMessages = new Thread(PublicMessageReader);
-            threadForPublicMessages.IsBackground = true;
-            threadForPublicMessages.Name = "PublicMessageReaderBitfinex";
+            Thread threadForPublicMessages = new Thread(PublicMessageReader)
+            {
+                IsBackground = true,
+                Name = "PublicMessageReaderBitfinex"
+            };
             threadForPublicMessages.Start();
 
-            Thread threadForPrivateMessages = new Thread(PrivateMessageReader);
-            threadForPrivateMessages.IsBackground = true;
-            threadForPrivateMessages.Name = "PrivateMessageReaderBitfinex";
+            Thread threadForPrivateMessages = new Thread(PrivateMessageReader)
+            {
+                IsBackground = true,
+                Name = "PrivateMessageReaderBitfinex"
+            };
             threadForPrivateMessages.Start();
 
         }
@@ -696,7 +700,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             DateTime yearBegin = new DateTime(1970, 1, 1);
 
-            var timeStampStart = timeFrom - yearBegin;
+            //var timeStampStart = timeFrom - yearBegin;
             //var startTimeMilliseconds = timeStampStart.TotalMilliseconds;
             // string startTime = Convert.ToInt64(startTimeMilliseconds).ToString();
 
@@ -875,9 +879,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                 //  _socketPrivateIsActive = false;////////////////
 
 
-                _webSocketPublic = new WebSocket(_webSocketPublicUrl);
-                _webSocketPublic.EnableAutoSendPing = true;
-                _webSocketPublic.AutoSendPingInterval = 15;
+                _webSocketPublic = new WebSocket(_webSocketPublicUrl)
+                {
+                    EnableAutoSendPing = true,
+                    AutoSendPingInterval = 15
+                };
 
                 _webSocketPublic.Opened += WebSocketPublic_Opened;
                 _webSocketPublic.Closed += WebSocketPublic_Closed;
@@ -887,9 +893,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                 _webSocketPublic.Open();
 
 
-                _webSocketPrivate = new WebSocket(_webSocketPrivateUrl);
-                _webSocketPrivate.EnableAutoSendPing = true;
-                _webSocketPrivate.AutoSendPingInterval = 15;
+                _webSocketPrivate = new WebSocket(_webSocketPrivateUrl)
+                {
+                    EnableAutoSendPing = true,
+                    AutoSendPingInterval = 15
+                };
 
                 _webSocketPrivate.Opened += WebSocketPrivate_Opened;
                 _webSocketPrivate.Closed += WebSocketPrivate_Closed;
@@ -1246,7 +1254,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             if (order.Amount > 0)
             {
-                newMarketDepth.Bids.Add(new MarketDepthLevel
+                newMarketDepth.Bids.Add(new MarketDepthLevel()
                 {
                     Price = order.Price,
                     Bid = order.Count
@@ -1254,7 +1262,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
             else
             {
-                newMarketDepth.Asks.Add(new MarketDepthLevel
+                newMarketDepth.Asks.Add(new MarketDepthLevel()
                 {
                     Price = order.Price,
                     Ask = Math.Abs(order.Amount)
@@ -2226,10 +2234,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     order.State = OrderStateType.Activ;
                     // order.NumberMarket = stateResponse.data.cid;
 
-                    if (MyOrderEvent != null)
-                    {
-                        MyOrderEvent(order);
-                    }
+                    MyOrderEvent?.Invoke(order);
 
                 }
 
@@ -2262,10 +2267,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             order.State = OrderStateType.Fail;
 
-            if (MyOrderEvent != null)
-            {
-                MyOrderEvent(order);
-            }
+            MyOrderEvent?.Invoke(order);
         }
 
         public void CancelAllOrders()
