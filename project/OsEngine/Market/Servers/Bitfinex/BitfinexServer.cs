@@ -1215,57 +1215,58 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        private void NewMethod6(BitfinexBookEntry order, string symbol)
+        private void NewMethod6(BitfinexBookEntry newOrderBook, string symbol)
         {
 
             if (_depths == null)
             {
                 _depths = new List<MarketDepth>();///////////////
             }
+            ///////
+            MarketDepth needDepth = null;
+            for (int i = 0; i < _depths.Count; i++)
+            {
+                if (_depths[i].SecurityNameCode == symbol)////////////////
+                {
+                    needDepth = _depths[i];
+                    break;
+                }
+            }
 
-            //MarketDepth needDepth = null;
-            //for (int i = 0; i < _depths.Count; i++)
-            //{
-            //    if (_depths[i].SecurityNameCode == symbol)////////////////
-            //    {
-            //        needDepth = _depths[i];
-            //        break;
-            //    }
-            //}
-
-            //if (needDepth == null)
-            //{
-            //    needDepth = new MarketDepth();
-            //    needDepth.SecurityNameCode = symbol;
-            //    _depths.Add(needDepth);
-            //}
+            if (needDepth == null)
+            {
+                needDepth = new MarketDepth();
+                needDepth.SecurityNameCode = symbol;
+                _depths.Add(needDepth);
+            }
 
 
-
+            ///////
 
             MarketDepth newMarketDepth = new MarketDepth
             {
-                SecurityNameCode = _currentSymbol,//symbol,
+                SecurityNameCode = symbol,
                 Time = DateTime.UtcNow, // serverTime
                 Asks = new List<MarketDepthLevel>(),
                 Bids = new List<MarketDepthLevel>()
             };
            
 
-            if (order.Amount > 0)
+            if (newOrderBook.Amount > 0)
             {
                 newMarketDepth.Bids.Add(new MarketDepthLevel()
                 {
-                    Price = order.Price,
-                    Bid = order.Count
+                   
+                    Price = newOrderBook.Price,
+                    Bid = newOrderBook.Count
                 });
             }
             else
             {
                 newMarketDepth.Asks.Add(new MarketDepthLevel()
                 {
-                    Price = order.Price,
-                    Ask = Math.Abs(order.Amount)
+                    Price = newOrderBook.Price,
+                    Ask = Math.Abs(newOrderBook.Amount)
                 });
             }
 
