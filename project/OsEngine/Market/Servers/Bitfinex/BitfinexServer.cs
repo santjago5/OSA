@@ -46,6 +46,7 @@ using System.Diagnostics;
 using OsEngine.Charts.CandleChart.Indicators;
 using OsEngine.Candles.Series;
 using Kraken.WebSockets.Messages;
+using OsEngine.Market.Servers.Alor.Json;
 
 
 
@@ -1123,9 +1124,10 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
             
             BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
+          
             ProcessDepth(message, responseDepth.Symbol);
         }
-
+       
         private void ProcessDepth(string message, string symbol)
         {
             try
@@ -1155,6 +1157,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                             ProcessOrderBookEntry(entry,symbol);
 
                         }
+                         
                     }
                     else if (parsedMessage.Count == 2 && parsedMessage[1] is JArray singleEntryArray)
                     {
@@ -1162,6 +1165,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         ProcessOrderBookEntry(orderBookEntry, symbol);
                     }
                 }
+                
             }
             catch (JsonException jsonEx)
             {
@@ -1211,69 +1215,139 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
 
 
-                NewMethod6(order, symbol);
+                UpdateMarketDepth(order, symbol);
             }
         }
-
-        private void NewMethod6(BitfinexBookEntry newOrderBook, string symbol)
+        
+        private void UpdateMarketDepth(BitfinexBookEntry newOrderBook, string symbol)
         {
-
-            if (_depths == null)
-            {
-                _depths = new List<MarketDepth>();///////////////
-            }
-            ///////
-            MarketDepth needDepth = null;
-            for (int i = 0; i < _depths.Count; i++)
-            {
-                if (_depths[i].SecurityNameCode == symbol)////////////////
-                {
-                    needDepth = _depths[i];
-                    break;
-                }
-            }
-
-            if (needDepth == null)
-            {
-                needDepth = new MarketDepth();
-                needDepth.SecurityNameCode = symbol;
-                _depths.Add(needDepth);
-            }
+           
 
 
-            ///////
+            //if (_depths == null)
+            //{
+            //    _depths = new List<MarketDepth>();
+            //}
 
             MarketDepth newMarketDepth = new MarketDepth
             {
                 SecurityNameCode = symbol,
-                Time = DateTime.UtcNow, // serverTime
+                Time = DateTime.UtcNow,
                 Asks = new List<MarketDepthLevel>(),
                 Bids = new List<MarketDepthLevel>()
             };
-           
 
-            if (newOrderBook.Amount > 0)
+            for (int i = 0; i <newOrderBook.Count; i++)/*orderBookEntries.Amount.Count*/
             {
-                newMarketDepth.Bids.Add(new MarketDepthLevel()
+               
+                if (newOrderBook.Amount > 0)
                 {
-                   
-                    Price = newOrderBook.Price,
-                    Bid = newOrderBook.Count
-                });
-            }
-            else
-            {
-                newMarketDepth.Asks.Add(new MarketDepthLevel()
+                    MarketDepthLevel levelBid = new MarketDepthLevel
+                    {
+                        Price = newOrderBook.Price,
+                        Bid = newOrderBook.Count
+                    };
+                    newMarketDepth.Bids.Add(levelBid);
+                }
+                else
                 {
-                    Price = newOrderBook.Price,
-                    Ask = Math.Abs(newOrderBook.Amount)
-                });
+                    MarketDepthLevel levelAsk = new MarketDepthLevel
+                    {
+                        Price = newOrderBook.Price,
+                        Ask = Math.Abs(newOrderBook.Amount)
+                    };
+                    newMarketDepth.Asks.Add(levelAsk);
+                }
             }
-
-            MarketDepthEvent?.Invoke(newMarketDepth/*.GetCopy()*/);
+            MarketDepthEvent?.Invoke(newMarketDepth);
         }
 
-       
+        //private void NewMethod6(BitfinexBookEntry newOrderBook, string symbol)
+        //{
+
+        //    if (_depths == null)
+        //    {
+        //        _depths = new List<MarketDepth>();///////////////
+
+        //    }
+        //    ///////
+
+        //    //if (needDepth == null)
+        //    //{
+        //    //    needDepth = new MarketDepth();
+        //    //    needDepth.SecurityNameCode = symbol;
+        //    //    _depths.Add(needDepth);
+        //    //}
+
+
+        //    ///////
+        //    MarketDepth newMarketDepth = new MarketDepth();
+
+        //    newMarketDepth.SecurityNameCode = symbol;
+        //    newMarketDepth.Time = DateTime.UtcNow;
+        //    List<MarketDepthLevel> ascs = new List<MarketDepthLevel>();
+        //    List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
+        //    newMarketDepth.Asks = ascs;
+        //    newMarketDepth.Bids = bids;
+
+
+
+        //    if (newOrderBook.Amount > 0)
+        //    {
+        //        for (int i = 0; i < ascs.Count; i++)
+        //        {
+
+        //            MarketDepthLevel level = new MarketDepthLevel();
+        //            level.Bid = newOrderBook.Amount.ToString().ToDecimal();
+        //            level.Price = newOrderBook.Price;
+        //            bids.Add(level);
+
+        //        }
+        //    }
+        //    else
+        //    {
+        //        for (int i = 0; i < newMarketDepth.Asks.Count; i++)
+        //        {
+        //            MarketDepthLevel level = new MarketDepthLevel();
+        //            level.Ask = newOrderBook.Amount.ToString().ToDecimal();
+        //            level.Price = newOrderBook.Price;
+        //            bids.Add(level);
+        //        }
+        //    }
+
+        //    MarketDepthEvent?.Invoke(newMarketDepth/*.GetCopy()*/);
+        //    ///////////////////////////////
+        //    //MarketDepth newMarketDepth = new MarketDepth();
+
+        //    //newMarketDepth.SecurityNameCode = symbol;
+        //    //newMarketDepth.Time = DateTime.UtcNow; // serverTime
+        //    //newMarketDepth.Asks = new List<MarketDepthLevel>();
+        //    //newMarketDepth.Bids = new List<MarketDepthLevel>();
+
+
+
+        //    //if (newOrderBook.Amount > 0)
+        //    //{
+        //    //    newMarketDepth.Bids.Add(new MarketDepthLevel()
+        //    //    {
+
+        //    //        Price = newOrderBook.Price,
+        //    //        Bid = newOrderBook.Count
+        //    //    });
+        //    //}
+        //    //else
+        //    //{
+        //    //    newMarketDepth.Asks.Add(new MarketDepthLevel()
+        //    //    {
+        //    //        Price = newOrderBook.Price,
+        //    //        Ask = Math.Abs(newOrderBook.Amount)
+        //    //    });
+        //    //}
+        //    /////////
+        //    //MarketDepthEvent?.Invoke(newMarketDepth/*.GetCopy()*/);
+        //}
+
+
 
 
         private void WebSocketPrivate_Opened(object sender, EventArgs e)

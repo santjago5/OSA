@@ -18,11 +18,20 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Amount { get; set; }
   
    }
-    public class BitfMarketDepth
-        {
-        public List<string> asks;
-        public List<string> bids;
+    public class BitfinexMarketDepthLevel
+    {
+        //public List<string> asks;
+        //public List<string> bids;
 
+        //public List<List<string>> ask { get; set; }
+        //public List<List<string>> bid { get; set; }
+
+        //public List<string>ask { get; set; }
+        //public List<string> bid { get; set; }
+
+        public List<BitfinexMarketDepth> bids;
+
+        public List<BitfinexMarketDepth> asks;
     }
   
 }
