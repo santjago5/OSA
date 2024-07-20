@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using WebSocket4Net;
@@ -976,11 +977,11 @@ namespace OsEngine.Market.Servers.Bitfinex
         public event Action<MarketDepth> MarketDepthEvent;
 
 
-        private static Dictionary<decimal, BitfinexBookEntry> orderBookBids = new Dictionary<decimal, BitfinexBookEntry>();
-        private static Dictionary<decimal, BitfinexBookEntry> orderBookAsks = new Dictionary<decimal, BitfinexBookEntry>();
+        //private static Dictionary<decimal, BitfinexBookEntry> orderBookBids = new Dictionary<decimal, BitfinexBookEntry>();
+        //private static Dictionary<decimal, BitfinexBookEntry> orderBookAsks = new Dictionary<decimal, BitfinexBookEntry>();
         #endregion
 
-        private List<MarketDepth> _depths;
+        //private List<MarketDepth> _depths;
 
         /// <summary>
         /// Обработка входящих сообщений от вёбсокета. И что важно в данном конкретном случае, Closed и Opened методы обязательно должны находиться здесь,
@@ -1076,10 +1077,10 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 if (e.Message.StartsWith("["))
                 {
-                    
-                 ProcessDepth(e.Message, _currentSymbol);
+
+                    ProcessDepth(e.Message, _currentSymbol);
                 }
-                
+
                 if (e.Message.StartsWith("event"))
                 {
                     return;
@@ -1110,38 +1111,37 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         }
 
-       
+
 
         private void ReceiveDepth(string message)
         {
-            if(message==null) 
-            { 
-                return; 
+            if (message == null)
+            {
+                return;
             }
-            if (string.IsNullOrEmpty(message)) 
-            { 
-                return; 
+            if (string.IsNullOrEmpty(message))
+            {
+                return;
             }
-            
+
             BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
-          
+
             ProcessDepth(message, responseDepth.Symbol);
         }
-       
+
         private void ProcessDepth(string message, string symbol)
         {
             try
             {
-                var token = JToken.Parse(message);
-
+              var token = JToken.Parse(message);
+               
                 if (token.Type == JTokenType.Object && token["event"] != null) return;
                 if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
 
                 if (token is JArray parsedMessage && parsedMessage.Count > 1)
                 {
+
                     int channelId = parsedMessage[0].Value<int>();
-                    
-                   
 
                     if (parsedMessage[1] is JArray)
                     {
@@ -1154,25 +1154,27 @@ namespace OsEngine.Market.Servers.Bitfinex
                         {
                             var entry = orderBookEntries[i].ToObject<List<decimal>>();
 
-                            ProcessOrderBookEntry(entry,symbol);
+                            ProcessOrderBookEntry(entry, symbol);
 
                         }
-                         
+
                     }
                     else if (parsedMessage.Count == 2 && parsedMessage[1] is JArray singleEntryArray)
                     {
+                        // Update
                         var orderBookEntry = singleEntryArray.ToObject<List<decimal>>();
                         ProcessOrderBookEntry(orderBookEntry, symbol);
                     }
                 }
-                
+
             }
             catch (JsonException jsonEx)
             {
                 Console.WriteLine("Failed to parse JSON message: " + jsonEx.Message);
             }
         }
-
+        private static List<BitfinexBookEntry> orderBookBids = new List<BitfinexBookEntry>();
+        private static List<BitfinexBookEntry> orderBookAsks = new List<BitfinexBookEntry>();
         private void ProcessOrderBookEntry(List<decimal> entry, string symbol)
         {
             if (entry.Count == 3)
@@ -1185,43 +1187,118 @@ namespace OsEngine.Market.Servers.Bitfinex
                 };
 
                 if (order.Count == 0)
-                {
+                {// Remove from bids
                     if (order.Amount > 0)
                     {
-                        if (orderBookBids.ContainsKey(order.Price))
+                        for (int i = 0; i < orderBookBids.Count; i++)
                         {
-                            orderBookBids.Remove(order.Price);
+                            if (orderBookBids[i].Price == order.Price)
+                            {
+                                orderBookBids.RemoveAt(i);
+                                break;
+                            }
                         }
                     }
+
                     else
                     {
-                        if (orderBookAsks.ContainsKey(order.Price))
+                        // Remove from asks
+                        for (int i = 0; i < orderBookAsks.Count; i++)
                         {
-                            orderBookAsks.Remove(order.Price);
+                            if (orderBookAsks[i].Price == order.Price)
+                            {
+                                orderBookAsks.RemoveAt(i);
+                                break;
+                            }
                         }
                     }
                 }
                 else
                 {
+                    // Update bids
                     if (order.Amount > 0)
                     {
-                        orderBookBids[order.Price] = order;
+                        // Update bids
+                        bool updated = false;
+                        for (int i = 0; i < orderBookBids.Count; i++)
+                        {
+                            if (orderBookBids[i].Price == order.Price)
+                            {
+                                orderBookBids[i] = order;
+                                updated = true;
+                                break;
+                            }
+                        }
+                        if (!updated)
+                        {
+                            orderBookBids.Add(order);
+                        }
                     }
+
                     else
                     {
+                        // Update asks
                         order.Amount = Math.Abs(order.Amount);
-                        orderBookAsks[order.Price] = order;
+                        bool updated = false;
+                        for (int i = 0; i < orderBookAsks.Count; i++)
+                        {
+                            if (orderBookAsks[i].Price == order.Price)
+                            {
+                                orderBookAsks[i] = order;
+                                updated = true;
+                                break;
+                            }
+                        }
+                        if (!updated)
+                        {
+                            orderBookAsks.Add(order);
+                        }
                     }
                 }
+                MarketDepth newMarketDepth = new MarketDepth
+                {
+                    SecurityNameCode = symbol,
+                    Time = DateTime.UtcNow,
+                    Asks = new List<MarketDepthLevel>(),
+                    Bids = new List<MarketDepthLevel>()
+                };
 
+                for (int i = 0; i < orderBookBids.Count; i++)
+                {
+                    var bid = orderBookBids[i];
+                    newMarketDepth.Bids.Add(new MarketDepthLevel { Price = bid.Price, Bid = bid.Amount });
+                }
 
-                UpdateMarketDepth(order, symbol);
+                for (int i = 0; i < orderBookAsks.Count; i++)
+                {
+                    var ask = orderBookAsks[i];
+                    newMarketDepth.Asks.Add(new MarketDepthLevel { Price = ask.Price, Ask = ask.Amount });
+                }
+
+                MarketDepthEvent?.Invoke(newMarketDepth);
+
+                //if (order.Amount > 0)
+                //{
+                //    orderBookBids[order.Price] = order;
+                //}
+                //else
+                //{
+                //    order.Amount = Math.Abs(order.Amount);
+                //    orderBookAsks[order.Price] = order;
+                //}
             }
+
+
+            //UpdateMarketDepth(order, symbol);
         }
-        
+
+
+
+
+
         private void UpdateMarketDepth(BitfinexBookEntry newOrderBook, string symbol)
         {
-           
+
 
 
             //if (_depths == null)
@@ -1237,10 +1314,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                 Bids = new List<MarketDepthLevel>()
             };
 
-            for (int i = 0; i <newOrderBook.Count; i++)/*orderBookEntries.Amount.Count*/
+
+            if (newOrderBook.Amount > 0)
             {
-               
-                if (newOrderBook.Amount > 0)
+                for (int i = 0; i < orderBookBids.Count; i++)
                 {
                     MarketDepthLevel levelBid = new MarketDepthLevel
                     {
@@ -1249,7 +1326,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                     };
                     newMarketDepth.Bids.Add(levelBid);
                 }
-                else
+            }
+            else
+            {
+                for (int i = 0; i < orderBookAsks.Count; i++)
                 {
                     MarketDepthLevel levelAsk = new MarketDepthLevel
                     {
@@ -1476,10 +1556,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                //if (string.IsNullOrEmpty(e.Message))
-                //{
-                //    return;
-                //}
+
 
 
                 if (e.Message.Contains("hb"))
@@ -1511,8 +1588,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-     
-        
+
+
 
         //private static void MethodDepth(MessageReceivedEventArgs e)
         //{
@@ -1624,7 +1701,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //        }
 
 
-                
+
         //    }
 
 
@@ -1632,9 +1709,9 @@ namespace OsEngine.Market.Servers.Bitfinex
         //}
 
 
-      
 
-       
+
+
 
 
 
@@ -1847,8 +1924,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private ConcurrentQueue<string> WebSocketPrivateMessage = new ConcurrentQueue<string>();
 
-        private static Dictionary<decimal, BitfinexBookEntry> bitfinexBookBids = new Dictionary<decimal, BitfinexBookEntry>();
-        private static Dictionary<decimal, BitfinexBookEntry> bitfinexBookAsks = new Dictionary<decimal, BitfinexBookEntry>();
+
 
 
 
@@ -2494,18 +2570,19 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         #endregion
 
-    }
 
 
 
-    public enum BitfinexSubType
-    {
-        Trades,
-        MarketDepth,
-        Porfolio,
-        Positions,
-        Orders,
-        MyTrades
+
+        public enum BitfinexSubType
+        {
+            Trades,
+            MarketDepth,
+            Porfolio,
+            Positions,
+            Orders,
+            MyTrades
+        }
     }
 }
 
