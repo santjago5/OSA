@@ -807,6 +807,7 @@ namespace OsEngine.Market.Servers.KuCoin.KuCoinSpot
             MarketDepthEvent(marketDepth);
         }
 
+
         private void UpdateMytrade(string json)
         {
             ResponseMessageRest<ResponseMyTrades> responseMyTrades = JsonConvert.DeserializeAnonymousType(json, new ResponseMessageRest<ResponseMyTrades>());
