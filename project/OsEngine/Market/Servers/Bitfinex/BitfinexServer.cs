@@ -1081,12 +1081,12 @@ namespace OsEngine.Market.Servers.Bitfinex
                     ProcessDepth(e.Message, _currentSymbol);
                 }
 
-                if (e.Message.StartsWith("event"))
+                if (e.Message.Contains("trade"))
                 {
-                    return;
+                    //    return;
+                    
                 }
-
-                if (WebSocketPublicMessage == null)
+                    if (WebSocketPublicMessage == null)
                 {
                     return;
                 }
@@ -1133,8 +1133,9 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
-              var token = JToken.Parse(message);
-               
+                var token = JToken.Parse(message);
+                //var token = JToken.Parse("[368374, [[60255, 4, 0.67260803], [60254, 5, 0.518042], [60288, 1, -0.4793], [60292, 2, -0.106655]]]");
+
                 if (token.Type == JTokenType.Object && token["event"] != null) return;
                 if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
 
@@ -1143,52 +1144,82 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     int channelId = parsedMessage[0].Value<int>();
 
-                    if (parsedMessage[1] is JArray)
+                    if (parsedMessage[1] is JArray)//if (parsedMessage[1] is JArray orderBookEntries)
                     {
 
-                        //orderBookBids.Clear();
-                        //orderBookAsks.Clear();
+                        //orderBookBids.Clear();/////////////
+                        //orderBookAsks.Clear();/////////////////
                         JArray orderBookEntries = (JArray)parsedMessage[1];
 
+                        // Initial snapshot
                         for (int i = 0; i < orderBookEntries.Count; i++)
                         {
-                            var entry = orderBookEntries[i].ToObject<List<decimal>>();
-
-                            ProcessOrderBookEntry(entry, symbol);
-
+                            var entryArray = orderBookEntries[i] as JArray;
+                            if (entryArray != null && entryArray.Count == 3)
+                            {
+                                var entry = new List<object>
+                            {
+                                entryArray[0],
+                                entryArray[1],
+                                entryArray[2]
+                            };
+                                ProcessOrderBookEntry(entry, symbol);
+                            }
                         }
+                        //for (int i = 0; i < orderBookEntries.Count; i++)
+                        //{
+
+                        //    var entry = orderBookEntries[i].ToObject<List<object>>();
+
+                        //    ProcessOrderBookEntry(entry, symbol);
+
+                        //}
 
                     }
                     else if (parsedMessage.Count == 2 && parsedMessage[1] is JArray singleEntryArray)
                     {
                         // Update
-                        var orderBookEntry = singleEntryArray.ToObject<List<decimal>>();
-                        ProcessOrderBookEntry(orderBookEntry, symbol);
+
+                        if (singleEntryArray.Count == 3)
+                        {
+                            var entry = new List<object>
+                        {
+                            singleEntryArray[0].Value<decimal>(),
+                            singleEntryArray[1].Value<decimal>(),
+                            singleEntryArray[2].Value<decimal>()
+                        };
+                            ProcessOrderBookEntry(entry, symbol);
+                            
+                        }
+
+
+                        //var orderBookEntry = singleEntryArray.ToObject<List<decimal>>();//////////
+                        //ProcessOrderBookEntry(orderBookEntry, symbol);
                     }
                 }
 
             }
-            catch (JsonException jsonEx)
+            catch (Exception exception)
             {
-                Console.WriteLine("Failed to parse JSON message: " + jsonEx.Message);
+                SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
         private static List<BitfinexBookEntry> orderBookBids = new List<BitfinexBookEntry>();
         private static List<BitfinexBookEntry> orderBookAsks = new List<BitfinexBookEntry>();
-        private void ProcessOrderBookEntry(List<decimal> entry, string symbol)
+        private void ProcessOrderBookEntry(List<object> entry, string symbol)
         {
             if (entry.Count == 3)
             {
                 var order = new BitfinexBookEntry
                 {
-                    Price = entry[0],
-                    Count = (int)entry[1],
-                    Amount = entry[2]
+                    Price = entry[0].ToString(),
+                    Count = entry[1].ToString(),
+                    Amount = entry[2].ToString(),
                 };
 
-                if (order.Count == 0)
+                if (Convert.ToDecimal(order.Count) == 0)
                 {// Remove from bids
-                    if (order.Amount > 0)
+                    if (Convert.ToDecimal(order.Amount) > 0)
                     {
                         for (int i = 0; i < orderBookBids.Count; i++)
                         {
@@ -1216,7 +1247,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 else
                 {
                     // Update bids
-                    if (order.Amount > 0)
+                    if (Convert.ToDecimal(order.Amount) > 0)
                     {
                         // Update bids
                         bool updated = false;
@@ -1238,7 +1269,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     else
                     {
                         // Update asks
-                        order.Amount = Math.Abs(order.Amount);
+                       
                         bool updated = false;
                         for (int i = 0; i < orderBookAsks.Count; i++)
                         {
@@ -1266,26 +1297,29 @@ namespace OsEngine.Market.Servers.Bitfinex
                 for (int i = 0; i < orderBookBids.Count; i++)
                 {
                     var bid = orderBookBids[i];
-                    newMarketDepth.Bids.Add(new MarketDepthLevel { Price = bid.Price, Bid = bid.Amount });
+                    newMarketDepth.Bids.Add(new MarketDepthLevel
+                    {
+                        Price = Convert.ToDecimal(bid.Price),
+                        Bid = Convert.ToDecimal(bid.Amount)
+                    });
+
                 }
 
                 for (int i = 0; i < orderBookAsks.Count; i++)
                 {
                     var ask = orderBookAsks[i];
-                    newMarketDepth.Asks.Add(new MarketDepthLevel { Price = ask.Price, Ask = ask.Amount });
+                    newMarketDepth.Asks.Add(new MarketDepthLevel
+                    {
+
+                        Price = Convert.ToDecimal(ask.Price),
+                        Ask = Math.Abs(Convert.ToDecimal(ask.Amount))
+                        
+                    });
                 }
 
                 MarketDepthEvent?.Invoke(newMarketDepth);
 
-                //if (order.Amount > 0)
-                //{
-                //    orderBookBids[order.Price] = order;
-                //}
-                //else
-                //{
-                //    order.Amount = Math.Abs(order.Amount);
-                //    orderBookAsks[order.Price] = order;
-                //}
+             
             }
 
 
@@ -1296,51 +1330,51 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-        private void UpdateMarketDepth(BitfinexBookEntry newOrderBook, string symbol)
-        {
+        //private void UpdateMarketDepth(BitfinexBookEntry newOrderBook, string symbol)
+        //{
 
 
 
-            //if (_depths == null)
-            //{
-            //    _depths = new List<MarketDepth>();
-            //}
+        //    //if (_depths == null)
+        //    //{
+        //    //    _depths = new List<MarketDepth>();
+        //    //}
 
-            MarketDepth newMarketDepth = new MarketDepth
-            {
-                SecurityNameCode = symbol,
-                Time = DateTime.UtcNow,
-                Asks = new List<MarketDepthLevel>(),
-                Bids = new List<MarketDepthLevel>()
-            };
+        //    MarketDepth newMarketDepth = new MarketDepth
+        //    {
+        //        SecurityNameCode = symbol,
+        //        Time = DateTime.UtcNow,
+        //        Asks = new List<MarketDepthLevel>(),
+        //        Bids = new List<MarketDepthLevel>()
+        //    };
 
 
-            if (newOrderBook.Amount > 0)
-            {
-                for (int i = 0; i < orderBookBids.Count; i++)
-                {
-                    MarketDepthLevel levelBid = new MarketDepthLevel
-                    {
-                        Price = newOrderBook.Price,
-                        Bid = newOrderBook.Count
-                    };
-                    newMarketDepth.Bids.Add(levelBid);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < orderBookAsks.Count; i++)
-                {
-                    MarketDepthLevel levelAsk = new MarketDepthLevel
-                    {
-                        Price = newOrderBook.Price,
-                        Ask = Math.Abs(newOrderBook.Amount)
-                    };
-                    newMarketDepth.Asks.Add(levelAsk);
-                }
-            }
-            MarketDepthEvent?.Invoke(newMarketDepth);
-        }
+        //    if (newOrderBook.Amount > 0)
+        //    {
+        //        for (int i = 0; i < orderBookBids.Count; i++)
+        //        {
+        //            MarketDepthLevel levelBid = new MarketDepthLevel
+        //            {
+        //                Price = Convert.ToDecimal(newOrderBook.Price),
+        //                Bid = newOrderBook.Count
+        //            };
+        //            newMarketDepth.Bids.Add(levelBid);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        for (int i = 0; i < orderBookAsks.Count; i++)
+        //        {
+        //            MarketDepthLevel levelAsk = new MarketDepthLevel
+        //            {
+        //                Price = Convert.ToDecimal(newOrderBook.Price),
+        //                Ask = Math.Abs(newOrderBook.Amount)
+        //            };
+        //            newMarketDepth.Asks.Add(levelAsk);
+        //        }
+        //    }
+        //    MarketDepthEvent?.Invoke(newMarketDepth);
+        //}
 
         //private void NewMethod6(BitfinexBookEntry newOrderBook, string symbol)
         //{

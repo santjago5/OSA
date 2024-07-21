@@ -108,9 +108,11 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
     public class BitfinexBookEntry
     {
-        public decimal Price { get; set; }
-        public int Count { get; set; }
-        public decimal Amount { get; set; }
+        public string Price { get; set; }/// <summary>
+        /// //////////
+        /// </summary>
+        public string Count { get; set; }
+        public string Amount { get; set; }
     }
 
     public class BitfinexBookSnapshot
