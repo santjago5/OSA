@@ -572,7 +572,6 @@
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexOrder.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexPortfolioRest.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexPortfolioSocket.cs" />
-    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexTrades.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexResponceWebSocket.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSecurity.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSoketMessageBase.cs" />
