@@ -23,10 +23,10 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string OrderId;             //34938060782, //ORDER_ID
 
         [JsonProperty("EXEC_AMOUNT")] 
-        public string ExecAmount;          //-0.2, //EXEC_AMOUNT
+        public string Amount;          //-0.2, //EXEC_AMOUNT
         
         [JsonProperty("EXEC_PRICE")] 
-        public string ExecPrice;           //153.57, //EXEC_PRICE
+        public string Price;           //153.57, //EXEC_PRICE
 
         [JsonProperty("ORDER_TYPE")] 
         public string OrderType;           //MARKET, //ORDER_TYPE
