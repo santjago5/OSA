@@ -12,79 +12,79 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     public class BitfinexOrder
     {
         [JsonProperty("MTS")]
-        public string time; //1678988263842, //MTS
+        public string Time; //1678988263842, //MTS
        
         [JsonProperty("TYPE")]
-        public string type;// "ou-req"order cancel request, //TYPE
+        public string Type;// "ou-req"order cancel request, //TYPE
 
         [JsonProperty("MESSAGE_ID")]
-        public string messageId;//MESSAGE_ID
+        public string MessageId;//MESSAGE_ID
 
         [JsonProperty("ID")]  
-        public string id;//1747566428, //ID
+        public string Id;//1747566428, //ID
 
         [JsonProperty("GID")]
-        public string gid; //GID Group Order ID
+        public string Gid; //GID Group Order ID
 
         [JsonProperty("CID")]
-        public string cid; //1678987199446, //CID Client Order ID
+        public string Cid; //1678987199446, //CID Client Order ID
 
         [JsonProperty("SYMBOL")]
-        public string symbol;  //"tBTCUSD", //SYMBOL
+        public string Symbol;  //"tBTCUSD", //SYMBOL
 
         [JsonProperty("MTS_CREATE")]
-        public string mtsCreate;    //1678987199446, //MTS_CREATE
+        public string TimeCreate;    //1678987199446, //MTS_CREATE
 
         [JsonProperty("MTS_UPDATE")]
-        public string mtsUpdate;    //1678988263843, //MTS_UPDATE
+        public string TimeUpdate;    //1678988263843, //MTS_UPDATE
   
         [JsonProperty("AMOUNT")]
-        public string amount;  // 0.25, //AMOUNT
+        public string Amount;  // 0.25, //AMOUNT
 
         [JsonProperty("AMOUNT_ORIG")]
-        public string amountOrig;  //    0.1, //AMOUNT_ORIG
+        public string AmountOrig;  //    0.1, //AMOUNT_ORIG
            
         [JsonProperty("ORDER_TYPE")]
-        public string orderType;   //"EXCHANGE LIMIT", //ORDER_TYPE
+        public string OrderType;   //"EXCHANGE LIMIT", //ORDER_TYPE
    
         [JsonProperty("TYPE_PREV")]
-        public string typePrev;  //"EXCHANGE LIMIT", //TYPE_PREV
+        public string TypePrev;  //"EXCHANGE LIMIT", //TYPE_PREV
 
         [JsonProperty("MTS_TIF")]
-        public string mtsTif;  //MTS_TIF
+        public string TimeTif;  //MTS_TIF
 
         [JsonProperty("FLAGS")]
-        public string flags;  // 0, //FLAGS
+        public string Flags;  // 0, //FLAGS
 
         [JsonProperty("STATUS")]
         public string status;   // "ACTIVE", //STATUS
 
         [JsonProperty("PRICE")]
-        public string price; // 25000, //PRICE
+        public string Price; // 25000, //PRICE
 
         [JsonProperty("PRICE_AVG")]
-        public string priceAvg;    // 0,153 //PRICE_AVG
+        public string PriceAvg;    // 0,153 //PRICE_AVG
 
         [JsonProperty("PRICE_TRAILING")]
-        public string priceTrailing;    // 0, //PRICE_TRAILING
+        public string PriceTrailing;    // 0, //PRICE_TRAILING
 
         [JsonProperty("PRICE_AUX_LIMIT")]
-        public string priceAuxLimit;   // 0, //PRICE_AUX_LIMIT
+        public string PriceAuxLimit;   // 0, //PRICE_AUX_LIMIT
 
         [JsonProperty("NOTIFY")]
-        public string notify;    // 0, //NOTIFY
+        public string Notify;    // 0, //NOTIFY
 
         [JsonProperty("HIDDEN")]
-        public string hidden;     //0, //HIDDEN
+        public string Hidden;     //0, //HIDDEN
 
         [JsonProperty("PLACED_ID")]
-        public string placed_id;     // null, //PLACED_ID
+        public string Placed_id;     // null, //PLACED_ID
 
         [JsonProperty("ROUTING")]
-        public string routing;    //  "API>BFX", //ROUTING
+        public string Routing;    //  "API>BFX", //ROUTING
 
         [JsonProperty("META")]
-        public string meta;      //null //META
+        public string Meta;      //null //META
 
         
 
