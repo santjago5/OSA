@@ -215,7 +215,30 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
        
     }
 
+    public class BitfinexResponseTrades
+    {
 
+        public string Event { get; set; }
+        public string Channel { get; set; }
+        public string ChanId { get; set; }
+        public string Symbol { get; set; }
+        public string Pair { get; set; }
+
+
+        //[JsonPropertyName("0")]
+        //public string Timestamp { get; set; }
+
+        //[JsonPropertyName("1")]
+        //public string TradeId { get; set; }
+
+        //[JsonPropertyName("2")]
+        //public string Amount { get; set; }
+
+        //[JsonPropertyName("3")]
+        //public string Price { get; set; }
+
+
+    }
 
 
 

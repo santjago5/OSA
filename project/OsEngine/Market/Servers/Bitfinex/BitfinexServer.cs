@@ -26,6 +26,9 @@ using SuperSocket.ClientEngine;
 using Trade = OsEngine.Entity.Trade;
 using MarketDepth = OsEngine.Entity.MarketDepth;
 using System.Text.Json;
+using OsEngine.Market.Servers.Bitfinex.BitfitnexEntity;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json.Linq;
 
 
 
@@ -88,7 +91,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 _securities.Clear();
                 _portfolios.Clear();
-               
+
 
                 SendLogMessage("Start Bitfinex Connection", LogMessageType.System);
 
@@ -789,9 +792,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                 try
                 {
 
-                    if (string.IsNullOrEmpty(candle.Time)  || string.IsNullOrEmpty(candle.Open) ||
+                    if (string.IsNullOrEmpty(candle.Time) || string.IsNullOrEmpty(candle.Open) ||
                         string.IsNullOrEmpty(candle.Close) || string.IsNullOrEmpty(candle.High) ||
-                        string.IsNullOrEmpty(candle.Low)   || string.IsNullOrEmpty(candle.Volume))
+                        string.IsNullOrEmpty(candle.Low) || string.IsNullOrEmpty(candle.Volume))
                     {
                         SendLogMessage("Candle data contains null or empty values", LogMessageType.Error);
                         continue;
@@ -837,7 +840,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
         private WebSocket _webSocketPublic;
-        private WebSocket _webSocketPrivate; 
+        private WebSocket _webSocketPrivate;
 
 
 
@@ -971,17 +974,11 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
 
             _socketPublicIsActive = true;//отвечает за соединение
-          
+
             CheckActivationSockets();
             SendLogMessage("Connection to public data is Open", LogMessageType.System);
 
-            //string tradesSubscriptionMessage =System.Text.Json.JsonSerializer.Serialize(new
-            //{
-            //    @event = "subscribe",
-            //    channel = "trades",
-            //    symbol = "tBTCUSD"
-            //});
-            //_webSocketPublic.Send(tradesSubscriptionMessage);
+
 
         }
 
@@ -1054,7 +1051,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     return;
                 }
-               
+
                 if (WebSocketPublicMessage == null)
                 {
                     return;
@@ -1076,110 +1073,284 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
 
 
-             count++;
-        }
-
-
-        private void ReceiveDepth(string message)
-        {
-            if (message == null)
-            {
-                return;
-            }
-            if (string.IsNullOrEmpty(message))
-            {
-                return;
-            }
-
-            // BitfinexResponseDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponseDepth>(message);
-            BitfinexResponceWebSocketDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponceWebSocketDepth>(message);
-
-            //ProcessDepth(message, responseDepth.Symbol);
-
+            count++;
         }
 
 
 
-        private static List<BitfinexBookEntry> depthBids = new List<BitfinexBookEntry>();
-        private static List<BitfinexBookEntry> depthAsks = new List<BitfinexBookEntry>();
-        private static int tradeChannelId;
-        private static int bookChannelId;
 
-        //  private void ProcessDepth(string message, string symbol)
+
+
+        private List<BitfinexBookEntry> depthBids = new List<BitfinexBookEntry>();
+        private List<BitfinexBookEntry> depthAsks = new List<BitfinexBookEntry>();
+        public long tradeChannelId;
+        public long bookChannelId;
+
+        ////private void ProcessMessage(string message, string symbol)
+        ////{
+        ////    try
+        ////    {
+        ////        using (JsonDocument jsonMessage = JsonDocument.Parse(message))//using гарантирует, что ресурсы, связанные с JsonDocument, будут правильно освобождены после обработки JSON-сообщения.
+        ////        {
+        ////            JsonElement jsonElement = jsonMessage.RootElement;
+
+        ////            if (jsonElement.ValueKind == JsonValueKind.Object)// && jsonElement.TryGetProperty("event", out _//_ игнорирование значения. Проверяем, существует ли свойство "event"
+        ////            {
+        ////                // Обработка служебных сообщений
+        ////                var eventType = jsonElement.GetProperty("event").GetString();
+        ////                if (eventType == "info" ||/* eventType == "subscribed" ||*/ eventType == "auth" || eventType == "hb")
+        ////                {
+        ////                    return;
+        ////                }
+        ////            }
+        ////            else if (jsonElement.ValueKind == JsonValueKind.Array)
+        ////            {
+        ////                int channelId = jsonElement[0].GetInt32();
+        ////                //JsonElement secondElement = jsonElement[1];
+        ////                var secondElement = jsonElement[1];
+
+        ////                if (secondElement.ValueKind == JsonValueKind.String)
+        ////                {
+        ////                    string messageTypeString = secondElement.GetString();
+
+
+        ////                    //if (messageTypeString == "tu" || messageTypeString == "te")
+        ////                    //{
+        ////                    //    ProcessTradeMessage(jsonElement);
+        ////                    //}
+        ////                }
+
+        ////                else if (secondElement.ValueKind == JsonValueKind.Array)
+        ////                {
+        ////                    if (channelId == tradeChannelId)
+        ////                    {
+        ////                        ProcessTradeSnapshotMessage(jsonElement[1]);
+        ////                    }
+        ////                    else if (channelId == bookChannelId)
+        ////                    {
+        ////                        ProcessBookSnapshotMessage(jsonElement[1], symbol);
+        ////                    }
+        ////                    // Initial snapshot
+
+        ////                    for (int i = 0; i < secondElement.GetArrayLength(); i++)
+        ////                    {
+        ////                        JsonElement entryArray = secondElement[i];
+
+        ////                        if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 3)
+        ////                        {
+        ////                            var entry = new List<object>
+        ////                          {
+        ////                            entryArray[0].GetDecimal(),
+        ////                            entryArray[1].GetDecimal(),
+        ////                            entryArray[2].GetDecimal()
+        ////                          };
+        ////                            ProcessBookEntry(entry, _currentSymbol);
+        ////                        }
+        ////                        if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 4)
+        ////                        {
+        ////                            var entry = new List<object>
+        ////                          {
+        ////                            entryArray[0].GetDecimal(),
+        ////                            entryArray[1].GetDecimal(),
+        ////                            entryArray[2].GetDecimal(),
+        ////                             entryArray[3].GetDecimal()
+        ////                          };
+        ////                            UpdateMyTrade(message);/////
+        ////                        }
+
+
+
+        ////                    }
+        ////                }
+        ////                else if (jsonElement.GetArrayLength() == 2 && secondElement.ValueKind == JsonValueKind.Array)
+        ////                {
+        ////                    // Update
+        ////                    JsonElement singleEntryArray = secondElement;
+
+        ////                    if (singleEntryArray.ValueKind == JsonValueKind.Array && singleEntryArray.GetArrayLength() == 3)
+        ////                    {
+        ////                        var entry = new List<object>
+        ////                    {
+        ////                        singleEntryArray[0].GetDecimal(),
+        ////                        singleEntryArray[1].GetDecimal(),
+        ////                        singleEntryArray[2].GetDecimal()
+        ////                    };
+        ////                        ProcessBookEntry(entry, symbol);
+        ////                    }
+        ////                }
+        ////            }
+        ////        }
+        ////    }
+        ////    catch (Exception exception)
+        ////    {
+        ////        SendLogMessage(exception.ToString(), LogMessageType.Error);
+        ////    }
+        ////}
+        //////public void ProcessMessage(string message, string symbol)
+        //////{
+        //////    try
+        //////    {
+        //////        using (JsonDocument jsonMessage = JsonDocument.Parse(message))
+        //////        {
+        //////            JsonElement jsonElement = jsonMessage.RootElement;
+
+        //////            if (jsonElement.ValueKind == JsonValueKind.Object)
+        //////            {
+        //////                var eventType = jsonElement.GetProperty("event").GetString();
+        //////                if (eventType == "info" || eventType == "auth" || eventType == "hb")
+        //////                {
+        //////                    return;
+        //////                }
+        //////            }
+        //////            else if (jsonElement.ValueKind == JsonValueKind.Array)
+        //////            {
+        //////                int channelId = jsonElement[0].GetInt32();
+        //////                var secondElement = jsonElement[1];
+
+        //////                if (secondElement.ValueKind == JsonValueKind.String)
+        //////                {
+        //////                    string messageTypeString = secondElement.GetString();
+        //////                }
+        //////                else if (secondElement.ValueKind == JsonValueKind.Array)
+        //////                {
+        //////                    if (channelId == tradeChannelId)
+        //////                    {
+        //////                        ProcessTradeSnapshotMessage(secondElement);
+        //////                    }
+        //////                    else if (channelId == bookChannelId)
+        //////                    {
+        //////                        ProcessBookSnapshotMessage(secondElement, symbol);
+        //////                    }
+
+        //////                    for (int i = 0; i < secondElement.GetArrayLength(); i++)
+        //////                    {
+        //////                        JsonElement entryArray = secondElement[i];
+
+        //////                        if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 3)
+        //////                        {
+        //////                            var entry = new List<object>
+        //////                    {
+        //////                        entryArray[0].GetDecimal(),
+        //////                        entryArray[1].GetDecimal(),
+        //////                        entryArray[2].GetDecimal()
+        //////                    };
+        //////                            ProcessBookEntry(entry, symbol);
+        //////                        }
+        //////                        if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 4)
+        //////                        {
+        //////                            var entry = new List<object>
+        //////                    {
+        //////                        entryArray[0].GetDecimal(),
+        //////                        entryArray[1].GetDecimal(),
+        //////                        entryArray[2].GetDecimal(),
+        //////                        entryArray[3].GetDecimal()
+        //////                    };
+        //////                            UpdateMyTrade(message);
+        //////                        }
+        //////                    }
+        //////                }
+        //////                else if (jsonElement.GetArrayLength() == 2 && secondElement.ValueKind == JsonValueKind.Array)
+        //////                {
+        //////                    JsonElement singleEntryArray = secondElement;
+
+        //////                    if (singleEntryArray.ValueKind == JsonValueKind.Array && singleEntryArray.GetArrayLength() == 3)
+        //////                    {
+        //////                        var entry = new List<object>
+        //////                {
+        //////                    singleEntryArray[0].GetDecimal(),
+        //////                    singleEntryArray[1].GetDecimal(),
+        //////                    singleEntryArray[2].GetDecimal()
+        //////                };
+        //////                        ProcessBookEntry(entry, symbol);
+        //////                    }
+        //////                }
+        //////            }
+        //////        }
+        //////    }
+        //////    catch (Exception exception)
+        //////    {
+        //////        SendLogMessage(exception.ToString(), LogMessageType.Error);
+        //////    }
+        //////}
+
         private void ProcessMessage(string message, string symbol)
         {
             try
             {
-                using (JsonDocument jsonMessage = JsonDocument.Parse(message))//using гарантирует, что ресурсы, связанные с JsonDocument, будут правильно освобождены после обработки JSON-сообщения.
+                using (JsonDocument jsonMessage = JsonDocument.Parse(message))
                 {
                     JsonElement jsonElement = jsonMessage.RootElement;
 
-                    if (jsonElement.ValueKind == JsonValueKind.Object)// && jsonElement.TryGetProperty("event", out _//_ игнорирование значения. Проверяем, существует ли свойство "event"
+                    if (jsonElement.ValueKind == JsonValueKind.Object)
                     {
-                        // Обработка служебных сообщений
                         var eventType = jsonElement.GetProperty("event").GetString();
-                        if (eventType == "info" || eventType == "subscribed" || eventType == "auth" || eventType == "hb")
+                        if (eventType == "info" || eventType == "auth" || eventType == "hb")
                         {
                             return;
                         }
                     }
-                   else if (jsonElement.ValueKind == JsonValueKind.Array )
+                    else if (jsonElement.ValueKind == JsonValueKind.Array)
                     {
                         int channelId = jsonElement[0].GetInt32();
-                        //JsonElement secondElement = jsonElement[1];
                         var secondElement = jsonElement[1];
 
                         if (secondElement.ValueKind == JsonValueKind.String)
                         {
                             string messageTypeString = secondElement.GetString();
-
-                            if (messageTypeString == "tu" || messageTypeString == "te")
-                            {
-                                ProcessTradeMessage(jsonElement);
-                            }
                         }
-
-                     else if (secondElement.ValueKind == JsonValueKind.Array)
+                        else if (secondElement.ValueKind == JsonValueKind.Array)
                         {
                             if (channelId == tradeChannelId)
                             {
-                                ProcessTradeSnapshotMessage(jsonElement[1]);
+                                ProcessTradeSnapshotMessage(secondElement);
                             }
                             else if (channelId == bookChannelId)
                             {
-                                ProcessBookSnapshotMessage(jsonElement[1],symbol);
+                                ProcessBookSnapshotMessage(secondElement, symbol);
                             }
-                            // Initial snapshot
 
                             for (int i = 0; i < secondElement.GetArrayLength(); i++)
                             {
                                 JsonElement entryArray = secondElement[i];
 
-                                if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 3)
+                                if (entryArray.ValueKind == JsonValueKind.Array)
                                 {
-                                  var entry = new List<object>
-                                  {
+                                    if (entryArray.GetArrayLength() == 3)
+                                    {
+                                        var entry = new List<object>
+                                {
                                     entryArray[0].GetDecimal(),
                                     entryArray[1].GetDecimal(),
                                     entryArray[2].GetDecimal()
-                                  };
-                                    ProcessBookEntry(entry,_currentSymbol);
+                                };
+                                        ProcessBookEntry(entry, _currentSymbol);
+                                    }
+                                    else if (entryArray.GetArrayLength() == 4)
+                                    {
+                                        var entry = new List<object>
+                                {
+                                    entryArray[0].GetDecimal(),
+                                    entryArray[1].GetDecimal(),
+                                    entryArray[2].GetDecimal(),
+                                    entryArray[3].GetDecimal()
+                                };
+                                        UpdateMyTrade(entryArray);
+                                    }
                                 }
                             }
                         }
                         else if (jsonElement.GetArrayLength() == 2 && secondElement.ValueKind == JsonValueKind.Array)
                         {
-                            // Update
                             JsonElement singleEntryArray = secondElement;
 
-                            if (singleEntryArray.ValueKind == JsonValueKind.Array && singleEntryArray.GetArrayLength() == 3)
+                            if (singleEntryArray.GetArrayLength() == 3)
                             {
                                 var entry = new List<object>
-                            {
-                                singleEntryArray[0].GetDecimal(),
-                                singleEntryArray[1].GetDecimal(),
-                                singleEntryArray[2].GetDecimal()
-                            };
+                        {
+                            singleEntryArray[0].GetDecimal(),
+                            singleEntryArray[1].GetDecimal(),
+                            singleEntryArray[2].GetDecimal()
+                        };
                                 ProcessBookEntry(entry, symbol);
                             }
                         }
@@ -1192,39 +1363,86 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-       
-
-        private  void ProcessTradeMessage(JsonElement jsonElement)
-        {
-            var tradeData = jsonElement[2];
-            long tradeId = tradeData[0].GetInt64();
-            long timestamp = tradeData[1].GetInt64();
-            double amount = tradeData[2].GetDouble();
-            double price = tradeData[3].GetDouble();
-
-           
-        }
-
-        private  void ProcessTradeSnapshotMessage(JsonElement trades)
+        public void ProcessTradeSnapshotMessage(JsonElement trades)
         {
             try
             {
-                int count = trades.GetArrayLength();
-                for (int i = 0; i < count; i++)
+                foreach (JsonElement tradeElement in trades.EnumerateArray())
                 {
-                    var tradeElement = trades[i];
-                    var trade = tradeElement.Deserialize<BitfinexTrade>();
-                   
+                    var trade = new BitfinexTrade
+                    {
+                        Timestamp = tradeElement[0].GetInt64(),
+                        TradeId = tradeElement[1].GetInt64(),
+                        Amount = tradeElement[2].GetDouble(),
+                        Price = tradeElement[3].GetDouble()
+                    };
+
+                    Console.WriteLine($"Trade snapshot: Trade ID: {trade.TradeId}, Timestamp: {trade.Timestamp}, Amount: {trade.Amount}, Price: {trade.Price}");
                 }
+            }
+            catch (Exception exception)
+            {
+                SendLogMessage(exception.ToString(), LogMessageType.Error);
+            }
+        }
+
+        public void ProcessTradesUpdateMessage(JsonElement trades)
+        {
+            try
+            {
+                foreach (JsonElement tradeElement in trades.EnumerateArray())
+                {
+                    var trade = new BitfinexTrade
+                    {
+                        Timestamp = tradeElement[0].GetInt64(),
+                        TradeId = tradeElement[1].GetInt64(),
+                        Amount = tradeElement[2].GetDouble(),
+                        Price = tradeElement[3].GetDouble()
+                    };
+
+                    
+                }
+            }
+            catch (Exception exception)
+            {
+                SendLogMessage(exception.ToString(), LogMessageType.Error);
+            }
+        }
+        private void UpdateMyTrade(JsonElement tradeElement)
+        {
+            try
+            {
+                var trade = new BitfinexTrade
+                {
+                    Timestamp = tradeElement[0].GetInt64(),
+                    TradeId = tradeElement[1].GetInt64(),
+                    Amount = tradeElement[2].GetDouble(),
+                    Price = tradeElement[3].GetDouble()
+                };
+
+                Trade newTrade = new Trade
+                {
+                    SecurityNameCode = _currentSymbol,
+                    Price = Convert.ToDecimal(trade.Price),
+                    Id = Convert.ToUInt64(trade.TradeId).ToString(),
+                    Time = TimeManager.GetDateTimeFromTimeStamp(trade.Timestamp),
+                    Volume = Math.Abs(Convert.ToDecimal(trade.Amount)),
+                    Side = trade.Amount > 0 ? Side.Buy : Side.Sell
+                };
+
+                ServerTime = newTrade.Time;
+
+                NewTradesEvent?.Invoke(newTrade);
             }
             catch (Exception error)
             {
-                Console.WriteLine($"Error processing trade snapshot message: {error.Message}\n{error.StackTrace}");
+                SendLogMessage(error.ToString(), LogMessageType.Error);
             }
         }
 
 
-        private  void ProcessBookSnapshotMessage(JsonElement book,string symbol)
+
+        private void ProcessBookSnapshotMessage(JsonElement book, string symbol)
         {
             try
             {
@@ -1240,7 +1458,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         entryArray[1].GetDecimal(),
                         entryArray[2].GetDecimal()
                     };
-                        ProcessBookEntry(entry,symbol);
+                        ProcessBookEntry(entry, symbol);
                     }
                 }
             }
@@ -1249,7 +1467,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 Console.WriteLine($"Error processing book snapshot message: {error.Message}\n{error.StackTrace}");
             }
         }
-        private void ProcessBookEntry(List<object> entry,string symbol)
+        private void ProcessBookEntry(List<object> entry, string symbol)
         {
             if (entry.Count == 3)
             {
@@ -1336,7 +1554,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var bid = depthBids[i];
                     newMarketDepth.Bids.Add(new MarketDepthLevel
                     {
-                        Price =(bid.Price).ToString().ToDecimal(),
+                        Price = (bid.Price).ToString().ToDecimal(),
                         Bid = (bid.Amount).ToString().ToDecimal()
                     });
                 }
@@ -1368,7 +1586,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    try
         //    {
         //         var token = JToken.Parse(message);
-        //       // var token = JToken.Parse("[368374, [[60255, 4, 0.67260803], [60254, 5, -0.518042]/*, [60288, 1, -0.4793], [60292, 2, -0.106655]*/]]");
+        //       // var token = JToken.Parse("[368374, [[60255, 4, 0.67260803], [60254, 5, -0.518042]/*, [60288, 1, -0.4793], [60292, 2, -0.106655]]]");
 
         //        if (token.Type == JTokenType.Object && token["event"] != null) return;
         //        if (token.Type == JTokenType.Array && token[1].ToString() == "hb") return;
@@ -1571,13 +1789,13 @@ namespace OsEngine.Market.Servers.Bitfinex
             SendLogMessage("Connection to private data is Open", LogMessageType.System);
 
             ////////////////
-            var pingMessage = new
-            {
-                @event = "ping",
-                cid = 1234
-            };
-            string jsonMessage = Newtonsoft.Json.JsonConvert.SerializeObject(pingMessage);
-            _webSocketPrivate.Send(jsonMessage);
+            //var pingMessage = new
+            //{
+            //    @event = "ping",
+            //    cid = 1234
+            //};
+            //string jsonMessage = Newtonsoft.Json.JsonConvert.SerializeObject(pingMessage);
+            //_webSocketPrivate.Send(jsonMessage);
             ////////////////
         }
 
@@ -1606,8 +1824,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             };
             string authMessageJson = JsonConvert.SerializeObject(authMessage);
 
-           _webSocketPrivate.Send(authMessageJson);
-            
+            _webSocketPrivate.Send(authMessageJson);
+
         }
 
         private void CheckActivationSockets()
@@ -1704,9 +1922,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                 WebSocketPrivateMessage.Enqueue(e.Message); // Добавление полученного сообщения в очередь
 
 
-
-              
-
             }
 
             catch (Exception exception)
@@ -1716,70 +1931,70 @@ namespace OsEngine.Market.Servers.Bitfinex
         }
 
 
-        private void ProcessTradeMessage(string message)
-        {
-            //var jsonDoc = JsonConvert.DeserializeObject<dynamic>(message);
-            dynamic jsonDoc = JsonConvert.DeserializeObject(message);
+        //private void ProcessTradeMessage(string message)
+        //{
+        //    //var jsonDoc = JsonConvert.DeserializeObject<dynamic>(message);
+        //    dynamic jsonDoc = JsonConvert.DeserializeObject(message);
 
-            if (jsonDoc["event"] != null)
-            {
-                // Handle event messages
-                string eventType = jsonDoc["event"];
-                switch (eventType)
-                {
-                    case "auth":
-                        if (jsonDoc["status"] != null && jsonDoc["status"] == "OK")
-                        {
-                            Console.WriteLine("Authenticated successfully");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Authentication failed");
-                        }
-                        break;
-                    default:
-                        Console.WriteLine($"Unknown event type: {eventType}");
-                        break;
-                }
-            }
-            else if (jsonDoc is Newtonsoft.Json.Linq.JArray)
-            {
-                // Handle data messages
-                int channelId = jsonDoc[0];
-                string msgType = jsonDoc[1];
+        //    if (jsonDoc["event"] != null)
+        //    {
+        //        // Handle event messages
+        //        string eventType = jsonDoc["event"];
+        //        switch (eventType)
+        //        {
+        //            case "auth":
+        //                if (jsonDoc["status"] != null && jsonDoc["status"] == "OK")
+        //                {
+        //                    Console.WriteLine("Authenticated successfully");
+        //                }
+        //                else
+        //                {
+        //                    Console.WriteLine("Authentication failed");
+        //                }
+        //                break;
+        //            default:
+        //                Console.WriteLine($"Unknown event type: {eventType}");
+        //                break;
+        //        }
+        //    }
+        //    else if (jsonDoc is Newtonsoft.Json.Linq.JArray)
+        //    {
+        //        // Handle data messages
+        //        int channelId = jsonDoc[0];
+        //        string msgType = jsonDoc[1];
 
-                if (channelId == 0)
-                {
-                    // Wallet messages
-                    switch (msgType)
-                    {
-                        case "ws":
+        //        if (channelId == 0)
+        //        {
+        //            // Wallet messages
+        //            switch (msgType)
+        //            {
+        //                case "ws":
 
-                            HandleWalletSnapshot(jsonDoc[2]);
-                            break;
-                        case "wu":
+        //                    HandleWalletSnapshot(jsonDoc[2]);
+        //                    break;
+        //                case "wu":
 
-                            HandleWalletUpdate(jsonDoc[2]);
-                            break;
+        //                    HandleWalletUpdate(jsonDoc[2]);
+        //                    break;
 
-                    }
-                }
-            }
-        }
+        //            }
+        //        }
+        //    }
+        //}
 
-        private void HandleWalletSnapshot(dynamic walletSnapshot)
-        {
-            for (int i = 0; i < walletSnapshot.Count; i++)
-            {
-                var wallet = walletSnapshot[i];
+        //private void HandleWalletSnapshot(dynamic walletSnapshot)
+        //{
+        //    for (int i = 0; i < walletSnapshot.Count; i++)
+        //    {
+        //        var wallet = walletSnapshot[i];
 
-            }
-        }
+        //    }
+        //}
 
-        private void HandleWalletUpdate(dynamic walletUpdate)
-        {
+        //private void HandleWalletUpdate(dynamic walletUpdate)
+        //{
 
-        }
+        //}
 
 
 
@@ -1837,7 +2052,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     if (_subscribledSecurities[i].Name == security.Name &&
                         _subscribledSecurities[i].NameClass == security.NameClass)
-                   
+
                     {
                         return;
                     }
@@ -1847,19 +2062,19 @@ namespace OsEngine.Market.Servers.Bitfinex
                 _subscribledSecurities.Add(security);
 
                 //Subscribing to account info
-               //_webSocketPrivate.Send($"{{\"event\":\"auth\",\"apiKey\":\"{_publicKey}\",\"authSig\":{signature}\",\"authPayload\":\"{ payload}\",\" authNonce\":{authNonce}\",\"calc\": 1\"}}"); 
+                //_webSocketPrivate.Send($"{{\"event\":\"auth\",\"apiKey\":\"{_publicKey}\",\"authSig\":{signature}\",\"authPayload\":\"{ payload}\",\" authNonce\":{authNonce}\",\"calc\": 1\"}}"); 
 
                 ////tiker websocket-event: "subscribe", channel: "ticker",symbol: SYMBOL 
-                 _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"ticker\",\"symbol\":{security.Name}\"}}");
+                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"ticker\",\"symbol\":{security.Name}\"}}");
 
 
                 ////candle websocket  //event: "subscribe",//channel: "candles", //key: "trade:1m:tBTCUSD"
-               //  _webSocketPublic.Send($"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:1m:{security.Name}\"}}");
+                //  _webSocketPublic.Send($"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:1m:{security.Name}\"}}");
 
-               
+
                 _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"{security.Name}\",\"prec\":\"P0\",\"freq\":\"F0\",\"len\":\"25\"}}");//стакан
-        
-                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"{security.Name}\"}}");;//трейды
+
+                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"{security.Name}\"}}"); ;//трейды
 
             }
             catch (Exception exception)
@@ -1889,7 +2104,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
         #endregion
-       
+
 
         /// <summary>
         ///Разбор сообщений от сокета и отправка их наверх
@@ -1950,19 +2165,28 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         BitfinexResponceWebSocketDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponceWebSocketDepth>(message);
                         _currentSymbol = responseDepth.Symbol;
-                        // ReceiveDepth(e.Message);
+                        bookChannelId = responseDepth.ChannelId;
+
                     }
+
+                    if (message.Contains("trade"))
+                    {
+                        BitfinexResponseTrades responseTrade = JsonConvert.DeserializeObject<BitfinexResponseTrades>(message);
+                        tradeChannelId = Convert.ToInt64(responseTrade.ChanId);
+                        UpdateTrade(message);
+                    }
+
                     if (message.StartsWith("["))
                     {
                         ProcessMessage(message, _currentSymbol);
                     }
 
 
-                    if (message.Contains("trade"))
-                    {
-                        //ProcessTradeMessage(e.Message);
-                        UpdateTrade(message);
-                    }
+                    //if (message.EndsWith("]]"))
+                    //{
+                    //    ProcessMessage(message, _currentSymbol);
+                    //}
+
 
 
                     //if (e.Message.StartsWith("]]"))
@@ -2028,7 +2252,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     //if (message.Contains("trade"))
                     //{
                     //    //ProcessTradeMessage(e.Message);
-                    //    UpdateTrade(message);
+                    //    UpdateMyTrade(message);
                     //}
 
                 }
@@ -2115,88 +2339,88 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
         //}
 
-       //private void ProcessMessage1(string message)
-       // {
-       //     try
-       //     {
-       //         // Попробуем распарсить сообщение как JSON-объект
-       //         var jsonElement = JsonDocument.Parse(message).RootElement;
+        //private void ProcessMessage1(string message)
+        // {
+        //     try
+        //     {
+        //         // Попробуем распарсить сообщение как JSON-объект
+        //         var jsonElement = JsonDocument.Parse(message).RootElement;
 
-       //         if (jsonElement.ValueKind == JsonValueKind.Array)
-       //         {
-       //             int chanId = jsonElement[0].GetInt32();
+        //         if (jsonElement.ValueKind == JsonValueKind.Array)
+        //         {
+        //             int chanId = jsonElement[0].GetInt32();
 
-       //             if (chanId == 0)
-       //             {
+        //             if (chanId == 0)
+        //             {
 
-       //                 return;
-       //             }
+        //                 return;
+        //             }
 
-       //             var messageType = jsonElement[1];
+        //             var messageType = jsonElement[1];
 
-       //             if (messageType.ValueKind == JsonValueKind.String)
-       //             {
-       //                 string messageTypeString = messageType.GetString();
+        //             if (messageType.ValueKind == JsonValueKind.String)
+        //             {
+        //                 string messageTypeString = messageType.GetString();
 
-       //                 if (messageTypeString == "te")
-       //                 {
-       //                     // Обработка сообщения о выполненной сделке
-       //                     ProcessTradeExecutedMessage(jsonElement[2]);
-       //                 }
-       //                 else if (messageTypeString == "tu")
-       //                 {
-       //                     // Обработка сообщения об обновлении сделки
-       //                     ProcessTradeUpdateMessage(jsonElement[2]);
-       //                 }
-       //                 else
-       //                 {
+        //                 if (messageTypeString == "te")
+        //                 {
+        //                     // Обработка сообщения о выполненной сделке
+        //                     ProcessTradeExecutedMessage(jsonElement[2]);
+        //                 }
+        //                 else if (messageTypeString == "tu")
+        //                 {
+        //                     // Обработка сообщения об обновлении сделки
+        //                     ProcessTradeUpdateMessage(jsonElement[2]);
+        //                 }
+        //                 else
+        //                 {
 
-       //                 }
-       //             }
-       //             else if (messageType.ValueKind == JsonValueKind.Array)
-       //             {
-       //                 // Обработка начального снимка трейдов
-       //                 ProcessTradeSnapshotMessage(jsonElement[1]);
-       //             }
-       //             else
-       //             {
+        //                 }
+        //             }
+        //             else if (messageType.ValueKind == JsonValueKind.Array)
+        //             {
+        //                 // Обработка начального снимка трейдов
+        //                 ProcessTradeSnapshotMessage(jsonElement[1]);
+        //             }
+        //             else
+        //             {
 
-       //             }
-       //         }
-       //         else if (jsonElement.ValueKind == JsonValueKind.Object)
-       //         {
-       //             // Обработка служебных сообщений
-       //             var eventType = jsonElement.GetProperty("event").GetString();
-       //             if (eventType == "info")
-       //             {
-       //                 return;
-       //             }
-       //             else if (eventType == "auth")
-       //             {
-       //                 Console.WriteLine("Authentication message received.");
-       //             }
-       //             else if (eventType == "subscribed")
-       //             {
-       //                 Console.WriteLine("Subscription message received.");
-       //             }
-       //             else
-       //             {
+        //             }
+        //         }
+        //         else if (jsonElement.ValueKind == JsonValueKind.Object)
+        //         {
+        //             // Обработка служебных сообщений
+        //             var eventType = jsonElement.GetProperty("event").GetString();
+        //             if (eventType == "info")
+        //             {
+        //                 return;
+        //             }
+        //             else if (eventType == "auth")
+        //             {
+        //                 Console.WriteLine("Authentication message received.");
+        //             }
+        //             else if (eventType == "subscribed")
+        //             {
+        //                 Console.WriteLine("Subscription message received.");
+        //             }
+        //             else
+        //             {
 
-       //             }
-       //         }
-       //         else
-       //         {
-       //             Console.WriteLine("Unexpected message format. Root element is not an array or object.");
-       //         }
-       //     }
-       //     catch (Exception error)
-       //     {
-       //         SendLogMessage(error.ToString(), LogMessageType.Error);
-       //     }
+        //             }
+        //         }
+        //         else
+        //         {
+        //             Console.WriteLine("Unexpected message format. Root element is not an array or object.");
+        //         }
+        //     }
+        //     catch (Exception error)
+        //     {
+        //         SendLogMessage(error.ToString(), LogMessageType.Error);
+        //     }
 
-       // }
+        // }
 
-       private void ProcessTradeExecutedMessage(JsonElement trade)
+        private void ProcessTradeExecutedMessage(JsonElement trade)
         {
             try
             {
@@ -2205,7 +2429,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 double amount = trade[2].GetDouble();
                 double price = trade[3].GetDouble();
 
-                Console.WriteLine($"Trade executed: Trade ID: {tradeId}, Timestamp: {timestamp}, Amount: {amount}, Price: {price}");
+
             }
             catch (Exception error)
             {
@@ -2214,7 +2438,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         }
 
-       private void ProcessTradeUpdateMessage(JsonElement trade)
+        private void ProcessTradeUpdateMessage(JsonElement trade)
         {
             try
             {
@@ -2223,7 +2447,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 double amount = trade[2].GetDouble();
                 double price = trade[3].GetDouble();
 
-               
+
             }
             catch (Exception error)
             {
@@ -2255,8 +2479,12 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
         //}
 
-    
-    private void UpdateTrade(string message)
+
+
+
+
+
+        private void UpdateTrade(string message)
         {
             var responseTrade = JsonConvert.DeserializeObject<BitfinexMyTrade>(message);
             try
@@ -2271,13 +2499,15 @@ namespace OsEngine.Market.Servers.Bitfinex
                     SecurityNameCode = responseTrade.Symbol,
                     Price = Convert.ToDecimal(responseTrade.Price),
                     Id = responseTrade.TradeId,
-                    Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(responseTrade.Time)),
+                    Time =TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(responseTrade.Time)),
                     Volume = Math.Abs(Convert.ToDecimal(responseTrade.Amount)),
                     Side = Convert.ToInt32(responseTrade.Amount) > 0 ? Side.Buy : Side.Sell//   // Side = responseTrade.Amount.Contains("-") ? Side.Sell : Side.Buy,
+
                 };
+                ServerTime = trade.Time;
 
-
-                NewTradesEvent?.Invoke(trade);
+                // NewTradesEvent?.Invoke(trade);
+                NewTradesEvent(trade);
             }
             catch (Exception error)
             {
