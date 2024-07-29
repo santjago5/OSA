@@ -656,7 +656,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-        private List<Candle> CreateQueryCandles(string nameSec, string interval, DateTime timeFrom, DateTime timeTo)
+        private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)//////////TimeSpan interval
         {
 
 
@@ -696,14 +696,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // string section = timeFrom !=DateTime.Today ?"hist":"last";////////////
 
-            // var client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:{interval}:{nameSec}/hist?start={startTime}&end={endTime}");
+            // var client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:{tf}:{nameSec}/hist?start={startTime}&end={endTime}");
 
 
-            //RestClient client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:{interval}:{nameSec}/hist?start={startTimeMilliseconds}&end={endTimeMilliseconds}");
+            //RestClient client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:{tf}:{nameSec}/hist?start={startTimeMilliseconds}&end={endTimeMilliseconds}");
 
             // RestClient client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:1m:tNEOUSD/hist");
 
-            RestClient client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:1m:{nameSec}/hist?start={startTime}&end={endTime}");
+            RestClient client = new RestClient($"https://api-pub.bitfinex.com/v2/candles/trade:{1m}:{nameSec}/hist?start={startTime}&end={endTime}");//////TF 
 
             // var request = new RestRequest("", Method.GET);
 
@@ -1334,7 +1334,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                                     entryArray[2].GetDecimal(),
                                     entryArray[3].GetDecimal()
                                 };
-                                        UpdateMyTrade(entryArray);
+                                        UpdateTrades(entryArray);
                                     }
                                 }
                             }
@@ -1408,7 +1408,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
-        private void UpdateMyTrade(JsonElement tradeElement)
+        private void UpdateTrades(JsonElement tradeElement)
         {
             try
             {
@@ -2486,7 +2486,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void UpdateTrade(string message)
         {
-            var responseTrade = JsonConvert.DeserializeObject<BitfinexMyTrade>(message);
+    
+            var responseTrade = JsonConvert.DeserializeObject<BitfinexTrades>(message);
             try
             {
                 if (responseTrade == null)
@@ -2496,18 +2497,18 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 Trade trade = new Trade
                 {
-                    SecurityNameCode = responseTrade.Symbol,
+                    SecurityNameCode = _currentSymbol,
                     Price = Convert.ToDecimal(responseTrade.Price),
-                    Id = responseTrade.TradeId,
-                    Time =TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(responseTrade.Time)),
+                    Id = responseTrade.Id,
+                    Time =TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(responseTrade.Mts)),
                     Volume = Math.Abs(Convert.ToDecimal(responseTrade.Amount)),
                     Side = Convert.ToInt32(responseTrade.Amount) > 0 ? Side.Buy : Side.Sell//   // Side = responseTrade.Amount.Contains("-") ? Side.Sell : Side.Buy,
 
                 };
                 ServerTime = trade.Time;
 
-                // NewTradesEvent?.Invoke(trade);
-                NewTradesEvent(trade);
+                 NewTradesEvent?.Invoke(trade);
+               // NewTradesEvent(trade);
             }
             catch (Exception error)
             {

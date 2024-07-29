@@ -587,7 +587,7 @@
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexResponceWebSocket.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSecurity.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexSoketMessageBase.cs" />
-    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexTrades.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexWebsocketTrades.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\Security1.cs" />
     <Compile Include="Market\Servers\BitGet\BitGetFutures\BitGetFuturesServerPermission.cs" />
     <Compile Include="Market\Servers\BitGet\BitGetFutures\BitGetServerFutures.cs" />
