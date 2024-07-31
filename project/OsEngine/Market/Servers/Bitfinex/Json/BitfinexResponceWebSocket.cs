@@ -181,7 +181,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
    
         public string Channel { get; set; }
         
-        public int ChannelId { get; set; }
+        public int ChanId { get; set; }
 
         public string Symbol { get; set; }
         [JsonPropertyName("prec")]

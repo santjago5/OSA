@@ -773,6 +773,7 @@ namespace OsEngine.Market.Servers.Deribit
         }
 
         private void UpdateTrade(string message)
+        
         {
             ResponseChannelTrades responseTrade = JsonConvert.DeserializeObject<ResponseChannelTrades>(message);
 

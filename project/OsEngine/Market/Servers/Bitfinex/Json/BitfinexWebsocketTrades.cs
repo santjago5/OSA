@@ -29,14 +29,14 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     public class TradeSnapshot
     {
         public string ChannelId { get; set; }
-        public List<BitfinexTrade> Trades { get; set; }
+        public List<BitfinexTrades> Trades { get; set; }
     }
 
     public class TradeUpdate
     {
         public string ChannelId { get; set; }
         public string MsgType { get; set; }
-        public BitfinexTrade Trade { get; set; }
+        public BitfinexTrades Trade { get; set; }
     }
 
 }
