@@ -198,47 +198,47 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
 
 
-    public class BitfinexTrade
-    {
-        [JsonPropertyName("0")]
-        public long Timestamp { get; set; }
+    //public class BitfinexTrade
+    //{
+    //    [JsonPropertyName("0")]
+    //    public long Timestamp { get; set; }
 
-        [JsonPropertyName("1")]
-        public long TradeId { get; set; }
+    //    [JsonPropertyName("1")]
+    //    public long TradeId { get; set; }
 
-        [JsonPropertyName("2")]
-        public double Amount { get; set; }
+    //    [JsonPropertyName("2")]
+    //    public double Amount { get; set; }
 
-        [JsonPropertyName("3")]
-        public double Price { get; set; }
+    //    [JsonPropertyName("3")]
+    //    public double Price { get; set; }
 
        
     }
 
-    public class BitfinexResponseTrades
-    {
+public class BitfinexResponseTrades
+{
 
-        public string Event { get; set; }
-        public string Channel { get; set; }
-        public string ChanId { get; set; }
-        public string Symbol { get; set; }
-        public string Pair { get; set; }
-
-
-        //[JsonPropertyName("0")]
-        //public string Timestamp { get; set; }
-
-        //[JsonPropertyName("1")]
-        //public string TradeId { get; set; }
-
-        //[JsonPropertyName("2")]
-        //public string Amount { get; set; }
-
-        //[JsonPropertyName("3")]
-        //public string Price { get; set; }
+    public string Event { get; set; }
+    public string Channel { get; set; }
+    public string ChanId { get; set; }
+    public string Symbol { get; set; }
+    public string Pair { get; set; }
 
 
-    }
+    //[JsonPropertyName("0")]
+    //public string Timestamp { get; set; }
+
+    //[JsonPropertyName("1")]
+    //public string TradeId { get; set; }
+
+    //[JsonPropertyName("2")]
+    //public string Amount { get; set; }
+
+    //[JsonPropertyName("3")]
+    //public string Price { get; set; }
+
+}
+    
 
 
 
@@ -297,7 +297,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
     }
 
-}
+
 
 
 
