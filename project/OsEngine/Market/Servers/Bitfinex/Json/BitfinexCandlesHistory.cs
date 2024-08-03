@@ -38,45 +38,17 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Volume { get; set; }          //0.07870586 //VOLUME
 
     }
+
+    // Определение класса для структуры данных снимка свечей
+    public class CandleSnapshot
+    {
+        public int ChannelId { get; set; }       // Идентификационный номер канала
+        public List<BitfinexCandle> Candles { get; set; } // Список свечей
+    }
+
+
+
 }
-
-/*
-        [JsonProperty("SYMBOL")]
-        public string symbol { get; set; }                   //tBTCUSD //SYMBOL
-
-        [JsonProperty("BID")]
-        public string bid { get; set; }                      //10645 //BID
-
-        [JsonProperty("BID_SIZE")]
-        public string bidSize { get; set; }                  //73.93854271 //BID_SIZE
-
-        [JsonProperty("ASK")]
-        public string ask { get; set; }                      //10647 //ASK
-
-        [JsonProperty("ASK_SIZE")]
-        public string askSize { get; set; }                  //75.22266119 //ASK_SIZE
-
-        [JsonProperty("DAILY_CHANGE")]
-        public string dailyChange { get; set; }              //731.60645389 //DAILY_CHANGE
-
-        [JsonProperty("DAILY_CHANGE_RELATIVE")]
-        public string dailyChangeRelative { get; set; }      //0.0738 //DAILY_CHANGE_RELATIVE
-
-        [JsonProperty("LAST_PRICE")]
-        public string lastPrice { get; set; }                //10644.00645389 //LAST_PRICE
-
-        [JsonProperty("VOLUME")]
-        public string volume { get; set; }                    //14480.89849423 //VOLUME
-
-        [JsonProperty("HIGH")]
-        public string high { get; set; }                      //10766 //HIGH
-
-        [JsonProperty("LOW")]
-        public string low { get; set; }                       //9889.1449809 //LOW
-
-        [JsonProperty("MTS")]
-        public string mts { get; set; }                       //1708354805000 //MTS
- */
 //1m: one minute
 //5m : five minutes
 //15m : 15 minutes

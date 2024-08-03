@@ -149,10 +149,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
 
 
-
-   
-
-
+    // Определение класса для структуры данных записи стакана
     public class BitfinexBookEntry
     {
         public string Price { get; set; }
@@ -160,15 +157,16 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Amount { get; set; }
     }
 
+    // Определение класса для структуры данных снимка стакана
     public class BitfinexBookSnapshot
     {
-        public int ChannelId { get; set; }
+        public string ChannelId { get; set; }
         public List<BitfinexBookEntry> BookEntries { get; set; }
     }
 
     public class BitfinexBookUpdate
     {
-        public int ChannelId { get; set; }
+        public string ChannelId { get; set; }
         public BitfinexBookEntry BookEntry { get; set; }
     }
 
@@ -181,7 +179,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
    
         public string Channel { get; set; }
         
-        public int ChanId { get; set; }
+        public string ChanId { get; set; }
 
         public string Symbol { get; set; }
         [JsonPropertyName("prec")]
@@ -197,47 +195,12 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         // "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
     }
 
-
-    //public class BitfinexTrade
-    //{
-    //    [JsonPropertyName("0")]
-    //    public long Timestamp { get; set; }
-
-    //    [JsonPropertyName("1")]
-    //    public long TradeId { get; set; }
-
-    //    [JsonPropertyName("2")]
-    //    public double Amount { get; set; }
-
-    //    [JsonPropertyName("3")]
-    //    public double Price { get; set; }
-
        
     }
 
-public class BitfinexResponseTrades
-{
-
-    public string Event { get; set; }
-    public string Channel { get; set; }
-    public string ChanId { get; set; }
-    public string Symbol { get; set; }
-    public string Pair { get; set; }
 
 
-    //[JsonPropertyName("0")]
-    //public string Timestamp { get; set; }
 
-    //[JsonPropertyName("1")]
-    //public string TradeId { get; set; }
-
-    //[JsonPropertyName("2")]
-    //public string Amount { get; set; }
-
-    //[JsonPropertyName("3")]
-    //public string Price { get; set; }
-
-}
     
 
 
@@ -277,25 +240,7 @@ public class BitfinexResponseTrades
         //"event":"subscribed","channel":"candles","chanId":343351,"key":"trade:1m:tBTCUSD"
     }
 
-    public class BitfinexResponceWebSocketAccountInfo
-    {
-
-        public string @event { get; set; }
-        public string apiKey { get; set; }
-        public string authSig { get; set; }
-        public string authPayload{ get; set; }
-        public string authNonce{ get; set; }
-        public string calc{ get; set; }
-
-
-        //event: "auth",
-        //apiKey: api_key,
-        //authSig: signature,
-        //authPayload: payload,
-        //authNonce: authNonce,
-        //calc: 1
-
-    }
+   
 
 
 

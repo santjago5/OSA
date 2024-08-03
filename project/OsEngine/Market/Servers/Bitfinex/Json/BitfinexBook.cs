@@ -11,13 +11,11 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     public class BitfinexBook
     {
 
-        [JsonProperty("ORDER_ID")]
-        public string orderId { get; set; }
+       
+        public string OrderId { get; set; }
 
-        [JsonProperty("PRICE")]
-        public string price { get; set; }
+        public string Price { get; set; }
 
-        [JsonProperty("AMOUNT")]
-        public string amount { get; set; }
+        public string Amount { get; set; }
     }
 }
