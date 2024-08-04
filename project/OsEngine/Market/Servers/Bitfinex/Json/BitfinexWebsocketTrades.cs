@@ -33,12 +33,12 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public List<BitfinexTrades> Trades { get; set; }
     }
 
-    public class BitfinexTradeUpdate
-    {
-        public string ChannelId { get; set; }
-        public string MsgType { get; set; }
-        public BitfinexTrades Trade { get; set; }
-    }
+    //public class BitfinexTradeUpdate
+    //{
+    //    public string ChannelId { get; set; }
+    //    public string MsgType { get; set; }
+    //    public BitfinexTrades Trade { get; set; }
+    //}
 
 
     public class BitfinexMyTradeUpdate
