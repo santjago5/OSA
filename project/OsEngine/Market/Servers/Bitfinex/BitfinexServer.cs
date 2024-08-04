@@ -32,6 +32,7 @@ using Newtonsoft.Json.Linq;
 using static Google.Protobuf.Reflection.FieldOptions.Types;
 using Tinkoff.InvestApi.V1;
 using OsEngine.Market.Servers.Pionex.Entity;
+using OsEngine.Charts.CandleChart.Indicators;
 
 
 
@@ -218,7 +219,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     string jsonResponse = response.Content;
 
-                    List<List<CandleSnapshot>> securityList = JsonConvert.DeserializeObject<List<List<CandleSnapshot>>>(jsonResponse);////////////
+                    //DeserializeObjectList
+                    // List<List<CandleSnapshot>> securityList = JsonConvert.DeserializeObject<List<List<CandleSnapshot>>>(jsonResponse);////////////
+                    //List < object> securityList = JsonConvert.DeserializeObject<List<object>>(jsonResponse);
+                    // List<BitfinexSecurity> securityList = JsonConvert.DeserializeObject<List<BitfinexSecurity>>(jsonResponse); 
+                    List<List<object>> securityList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
 
                     if (securityList == null)
                     {
@@ -237,7 +242,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         {
 
-                           // Symbol = item[0].ToString(),
+                            Symbol = item[0].ToString(),
                             Bid = (item[1]).ToString(),
                             BidSize = (item[2]).ToString(),
                             Ask = (item[3]).ToString(),
@@ -286,7 +291,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        private void UpdateSecurity(List<BitfinexSecurity> security,string symbol)
+        private void UpdateSecurity(List<BitfinexSecurity> security)
         {
 
 
@@ -303,33 +308,32 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
                     Security newSecurity = new Security();
-                    {
-                        newSecurity.Name = symbol;
-                        newSecurity.NameFull = symbol;
-                        newSecurity.NameClass = "Spot";
-                        newSecurity.NameId = Convert.ToString(symbol);
-                        newSecurity.Exchange = ServerType.Bitfinex.ToString();
 
-                        newSecurity.Lot = 1;
+                    newSecurity.Name = securityData.Symbol;
+                    newSecurity.NameFull = securityData.Symbol;
+                    newSecurity.NameClass = "Spot";
+                    newSecurity.NameId = Convert.ToString(securityData.Symbol);
+                    newSecurity.Exchange = ServerType.Bitfinex.ToString();
 
-                        newSecurity.SecurityType = SecurityType.CurrencyPair;
+                    newSecurity.Lot = 1;
 
-                        newSecurity.State = SecurityStateType.Activ;
+                    newSecurity.SecurityType = SecurityType.CurrencyPair;
 
-                        newSecurity.PriceStep = newSecurity.Decimals.GetValueByDecimals();
+                    newSecurity.State = SecurityStateType.Activ;
 
-                        newSecurity.PriceStepCost = newSecurity.PriceStep;
+                    newSecurity.PriceStep = newSecurity.Decimals.GetValueByDecimals();
 
-                        // newSecurity.Decimals = Convert.ToInt32(securityData.LastPrice);////////////////
+                    newSecurity.PriceStepCost = newSecurity.PriceStep;
 
-
-                        // newSecurity.DecimalsVolume = newSecurity.Decimals;
+                    //newSecurity.Decimals = Convert.ToInt32(securityData.LastPrice);////////////////
 
 
-                        _securities.Add(newSecurity);////////////////////////;
+                    // newSecurity.DecimalsVolume = newSecurity.Decimals;
 
 
-                    };
+                    _securities.Add(newSecurity);////////////////////////;
+
+
 
 
                     SecurityEvent(_securities);
@@ -804,7 +808,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     {
                         State = CandleState.Finished,
                         TimeStart = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(candle.Time)),
-                        Open = (candle.Open).ToString().ToDecimal(),///????????????????
+                        Open = Convert.ToDecimal(candle.Open),///????????????????
                         Close = Convert.ToDecimal(candle.Close),
                         High = Convert.ToDecimal(candle.High),
                         Low = Convert.ToDecimal(candle.Low),
@@ -1074,6 +1078,252 @@ namespace OsEngine.Market.Servers.Bitfinex
         public long bookChannelId;
 
 
+
+        /// <summary>
+        /// //77777777777777777777777777777777777777777
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+
+
+
+        // Снимок(snapshot) : Структура данных содержит массив массивов, где каждый внутренний массив представляет собой запись в стакане(book entry).
+        //Обновление(update) : Структура данных содержит только один массив, представляющий одну запись в стакане(book entry).
+
+        public void ProcessOrderBookResponse(string jsonResponse, string symbol)
+        {
+            // Десериализация JSON-ответа в JsonElement
+            var jsonDocument = JsonDocument.Parse(jsonResponse);
+            var root = jsonDocument.RootElement;
+
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                var eventType = root.GetProperty("event").GetString();
+                if (eventType == "info" || eventType == "auth" || eventType == "hb")
+                {
+                    return;
+                }
+            }
+
+
+            // Извлечение Channel ID
+            int channelId = root[0].GetInt32();
+
+            // Извлечение основного содержимого
+            var secondElement = root[1];
+
+            if (secondElement.ValueKind == JsonValueKind.String)
+            {
+                string messageTypeString = secondElement.GetString();
+
+                if (messageTypeString == "te")
+                {
+                    HandleTradeExecuted(secondElement[2].GetRawText());//почему [2], а не [1]
+                }
+                else if (messageTypeString == "tu")
+                {
+                    HandleTradeUpdate(secondElement[2].GetRawText());
+                }
+            }
+
+
+            // Проверка, является ли это снимком или обновлением
+            if (secondElement.ValueKind == JsonValueKind.Array && secondElement[0].ValueKind == JsonValueKind.Array)
+            {
+                // Это снимок (snapshot)
+                var bookEntries = new List<BitfinexBookEntry>();
+
+                // Перебор всех записей в снимке с использованием цикла for
+                for (int i = 0; i < secondElement.GetArrayLength(); i++)
+                {
+                    var entryElement = secondElement[i]; // Извлечение текущей записи
+
+                    // Создание нового объекта BitfinexBookEntry и заполнение его полей
+                    var bookEntry = new BitfinexBookEntry
+                    {
+                        Price =(entryElement[0]).ToString(),//.ToString().ToDecimal() // Извлечение и установка значения Price
+                        Count = ( entryElement[1]).ToString(),  // Извлечение и установка значения Count
+                        Amount = ( entryElement[2]).ToString() // Извлечение и установка значения Amount
+                    };
+
+                    // Добавление объекта в список bookEntries
+                    bookEntries.Add(bookEntry);
+                }
+
+                // Обработка снимка
+                ProcessSnapshot(bookEntries);
+            }
+            else
+            {
+                // Это обновление (update)
+                var bookEntry = new BitfinexBookEntry
+                {
+                    Price = (secondElement[0]).ToString(), // Извлечение и установка значения Price
+                    Count = (secondElement[1]).ToString(),  // Извлечение и установка значения Count
+                    Amount = ( secondElement[2]).ToString() // Извлечение и установка значения Amount
+                };
+
+                // Обработка обновления
+                ProcessUpdate(bookEntry);
+            }
+        }
+
+        private void HandleTradeUpdate(string v)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void HandleTradeExecuted(string v)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ProcessSnapshot(List<BitfinexBookEntry> bookEntries)
+        {
+            // Обновление внутреннего состояния стакана
+            depthBids.Clear(); // Очистка текущих записей о bid'ах
+            depthAsks.Clear(); // Очистка текущих записей о ask'ах
+
+            // Перебор всех записей в снимке с использованием цикла for
+            for (int i = 0; i < bookEntries.Count; i++)
+            {
+                var entry = bookEntries[i]; // Извлечение текущей записи
+
+                // Если количество больше 0, это bid
+               
+                // if (Convert.ToDecimal(entry.Amount) > 0)
+               if(entry.Amount.Contains("-"))
+                {
+                    // Добавление новой записи в список bid'ов
+                    depthBids.Add(new BitfinexBookEntry
+                    {
+                        Price = entry.Price, // Преобразование цены 
+                        Count = entry.Count, // Преобразование количества 
+                        Amount = entry.Amount // Преобразование объема 
+                    });
+                }
+                else // В противном случае, это ask
+                {
+                    // Добавление новой записи в список ask'ов
+                    depthAsks.Add(new BitfinexBookEntry
+                    {
+                        Price = entry.Price, // Преобразование цены в строку
+                        Count = entry.Count, // Преобразование количества в строку
+                        Amount = entry.Amount // Преобразование объема в строку
+                    });
+                }
+            }
+
+            // Вызов обновления стакана
+            UpdateOrderBook(); // Вызов метода для обновления стакана
+        }
+        private void ProcessUpdate(BitfinexBookEntry entry)////не понятно что тут
+        {
+            // Логика обновления стакана, аналогичная приведенной выше
+            var bookEntry = new BitfinexBookEntry
+            {
+                Price = entry.Price.ToString(),
+                Count = entry.Count.ToString(),
+                Amount = entry.Amount.ToString()
+            };
+
+            // Обновление или удаление записи в стакане
+            if (Convert.ToUInt32(entry.Count) == 0)
+            {
+               // if (Convert.ToDecimal(entry.Amount )> 0)
+
+               if(entry.Amount.Contains("-"))
+                {
+                    depthBids.RemoveAll(bid => bid.Price == bookEntry.Price);
+                }
+                else
+                {
+                    depthAsks.RemoveAll(ask => ask.Price == bookEntry.Price);
+                }
+            }
+            else
+
+            {
+
+                // if (Convert.ToUInt32(entry.Amount )> 0)
+                if (entry.Amount.Contains("-"))
+                {
+                    bool updated = false;
+                    for (int i = 0; i < depthBids.Count; i++)
+                    {
+                        if (depthBids[i].Price == bookEntry.Price)
+                        {
+                            depthBids[i] = bookEntry;
+                            updated = true;
+                            break;
+                        }
+                    }
+                    if (!updated)
+                    {
+                        depthBids.Add(bookEntry);
+                    }
+                }
+                else
+                {
+                    bool updated = false;
+                    for (int i = 0; i < depthAsks.Count; i++)
+                    {
+                        if (depthAsks[i].Price == bookEntry.Price)
+                        {
+                            depthAsks[i] = bookEntry;
+                            updated = true;
+                            break;
+                        }
+                    }
+                    if (!updated)
+                    {
+                        depthAsks.Add(bookEntry);
+                    }
+                }
+            }
+
+            // Вызов обновления стакана
+            UpdateOrderBook();
+        }
+
+        private void UpdateOrderBook()
+        {
+            // Создание нового объекта MarketDepth для обновления стакана
+            MarketDepth newMarketDepth = new MarketDepth
+            {
+                SecurityNameCode = _currentSymbol,
+                Time = DateTime.UtcNow,
+                Asks = new List<MarketDepthLevel>(),
+                Bids = new List<MarketDepthLevel>()
+            };
+
+            // Перебор всех bid уровней и добавление их в новый стакан
+            foreach (var bid in depthBids)
+            {
+                newMarketDepth.Bids.Add(new MarketDepthLevel
+                {
+                    Price = Convert.ToDecimal(bid.Price),
+                    Bid = Convert.ToDecimal(bid.Amount)
+                });
+            }
+
+            // Перебор всех ask уровней и добавление их в новый стакан
+            foreach (var ask in depthAsks)
+            {
+                newMarketDepth.Asks.Add(new MarketDepthLevel
+                {
+                    Price = Convert.ToDecimal(ask.Price),
+                    Ask = Math.Abs(Convert.ToDecimal(ask.Amount))
+                });
+            }
+
+            // Вызов события обновления стакана
+            MarketDepthEvent?.Invoke(newMarketDepth);
+        }
+
+
+
+
         //private void ProcessMessage(string message, string symbol)
         //{
         //    try
@@ -1089,76 +1339,66 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                {
         //                    return;
         //                }
-
         //            }
         //            else if (jsonElement.ValueKind == JsonValueKind.Array)
         //            {
         //                int channelId = jsonElement[0].GetInt32();
         //                var secondElement = jsonElement[1];
 
-
         //                if (secondElement.ValueKind == JsonValueKind.String)
         //                {
         //                    string messageTypeString = secondElement.GetString();
 
-        //                    //if (messageTypeString == "te" )
-        //                    //{
-        //                    //    HandleTradeExecuted(jsonElement[2].GetRawText());
-        //                    //}
-
-        //                    if (messageTypeString == "te" || messageTypeString == "tu")
+        //                    if (messageTypeString == "te")
         //                    {
-        //                        // HandleTradeUpdate(jsonElement[2].GetRawText());
-        //                        // ProcessTradeExecutedMessage(jsonElement[2].GetRawText());
+        //                        HandleTradeExecuted(jsonElement[2].GetRawText());
         //                    }
-
+        //                    else if (messageTypeString == "tu")
+        //                    {
+        //                        HandleTradeUpdate(jsonElement[2].GetRawText());
+        //                    }
         //                }
-        //                else if (secondElement.ValueKind == JsonValueKind.Array)//если второй элемент является массивом
+        //                else if (secondElement.ValueKind == JsonValueKind.Array)
         //                {
         //                    if (channelId == tradeChannelId)
         //                    {
         //                        ProcessTradeSnapshotMessage(secondElement, channelId);
-        //                        // ProcessTradeSnapshotMessage(jsonElement);
-        //                        // ProcessTradeSnapshotMessage(secondElement);
         //                    }
         //                    else if (channelId == bookChannelId)
         //                    {
-        //                        ProcessBookSnapshotMessage(secondElement, symbol);
+        //                        ProcessBookSnapshotMessage(secondElement, channelId);
         //                    }
 
-        //                    for (int i = 0; i < secondElement.GetArrayLength(); i++)
-        //                    {
-        //                        JsonElement entryArray = secondElement[i];
+        //                    //for (int i = 0; i < secondElement.GetArrayLength(); i++)
+        //                    //{
+        //                    //    JsonElement entryArray = secondElement[i];
 
-        //                        if (entryArray.ValueKind == JsonValueKind.Array)
-        //                        {
-        //                            if (entryArray.GetArrayLength() == 3)
-        //                            {
-        //                                var entry = new List<object>
-        //                        {
-        //                            entryArray[0].ToString(),
-        //                            entryArray[1].ToString(),
-        //                            entryArray[2].ToString()
-        //                        };
-        //                                ProcessBookEntry(entry, symbol);
-        //                            }
-        //                            else if (entryArray.GetArrayLength() == 4)
-        //                            {
-        //                                var entry = new List<object>
-        //                        {
-        //                            entryArray[0].ToString(),
-        //                            entryArray[1].ToString(),
-        //                            entryArray[2].ToString(),
-        //                            entryArray[3].ToString()
-        //                        };
-        //                                //ProcessTradeExecutedMessage(entryArray);
-        //                                ProcessTradeExecutedMessage(message);
-        //                                //UpdateTrades(entryArray);
-        //                                //HandleTradeUpdate(entryArray);
-        //                                // HandleTradeUpdate(entry);
-        //                            }
-        //                        }
-        //                    }
+        //                    //    if (entryArray.ValueKind == JsonValueKind.Array)
+        //                    //    {
+        //                    //        if (entryArray.GetArrayLength() == 3)
+        //                    //        {
+        //                    //            var entry = new BitfinexMarketDepth
+        //                    //            {
+        //                    //                Price = entryArray[0].ToString(),
+        //                    //                Count = entryArray[1].ToString(),
+        //                    //                Amount = entryArray[2].ToString()
+        //                    //            };
+        //                    //            ProcessBookEntry(entryArray, symbol);
+        //                    //        }
+        //                    //        else if (entryArray.GetArrayLength() == 4)
+        //                    //        {
+        //                    //            var entry = new BitfinexTrades
+        //                    //            {
+        //                    //                Id = entryArray[0].ToString(),
+        //                    //                Mts = entryArray[1].ToString(),
+        //                    //                Amount = entryArray[2].ToString(),
+        //                    //                Price = entryArray[3].ToString()
+        //                    //            };
+
+        //                    //            ProcessTradeExecutedMessage(entryArray);
+        //                    //        }
+        //                    //    }
+        //                    //}
         //                }
         //                else if (jsonElement.GetArrayLength() == 2 && secondElement.ValueKind == JsonValueKind.Array)
         //                {
@@ -1166,13 +1406,13 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         //                    if (singleEntryArray.GetArrayLength() == 3)
         //                    {
-        //                        var entry = new List<object>
-        //                {
-        //                    singleEntryArray[0].GetDecimal(),
-        //                    singleEntryArray[1].GetDecimal(),
-        //                    singleEntryArray[2].GetDecimal()
-        //                };
-        //                        ProcessBookEntry(entry, symbol);
+        //                        var entry = new BitfinexMarketDepth
+        //                        {
+        //                            Price = singleEntryArray[0].ToString(),
+        //                            Count = singleEntryArray[1].ToString(),
+        //                            Amount = singleEntryArray[2].ToString(),
+        //                        };
+        //                        ProcessBookEntry(singleEntryArray, symbol);
         //                    }
         //                }
         //            }
@@ -1184,28 +1424,120 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
         //}
 
-        ////public void ProcessTradeSnapshotMessage(string message)//(JsonElement jsonElement)
+        //private void HandleTradeExecuted(string tradeExecutedMessage)
+        //{
+        //    try
+        //    {
+        //        using (JsonDocument jsonMessage = JsonDocument.Parse(tradeExecutedMessage))
+        //        {
+        //            JsonElement rootElement = jsonMessage.RootElement;
+
+        //            if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
+        //            {
+        //                throw new InvalidOperationException("Invalid message format.");
+        //            }
+
+        //            JsonElement tradeElement = rootElement[2];
+
+        //            if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 12)
+        //            {
+        //                var tradeUpdate = new BitfinexMyTradeUpdate
+        //                {
+        //                    Id = tradeElement[0].ToString(),
+        //                    Symbol = tradeElement[1].ToString(),
+        //                    MtsCreate = tradeElement[2].ToString(),
+        //                    OrderId = tradeElement[3].ToString(),
+        //                    ExecAmount = tradeElement[4].ToString(),
+        //                    ExecPrice = tradeElement[5].ToString(),
+        //                    OrderType = tradeElement[6].ToString(),
+        //                    OrderPrice = tradeElement[7].ToString(),
+        //                    Maker = tradeElement[8].ToString(),
+        //                    Fee = (tradeElement[9].ValueKind).ToString(),// == JsonValueKind.Null ? (double?)null : tradeElement[9].GetDouble(),
+        //                    FeeCurrency = tradeElement[10].ToString(),
+        //                    Cid = tradeElement[11].ToString()
+        //                };
+
+        //                Trade newTrade = new Trade
+        //                {
+        //                    SecurityNameCode = _currentSymbol,
+        //                    Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
+        //                    Id = tradeUpdate.Id,
+        //                    Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
+        //                    Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
+        //                    Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
+        //                };
+
+        //                ServerTime = newTrade.Time;
+        //                NewTradesEvent?.Invoke(newTrade);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        SendLogMessage(exception.ToString(), LogMessageType.Error);
+        //    }
+        //}
+
+
+        //private void HandleTradeUpdate(string tradeUpdateMessage)
+        //{
+        //    try
+        //    {
+        //        using (JsonDocument jsonMessage = JsonDocument.Parse(tradeUpdateMessage))
+        //        {
+        //            JsonElement rootElement = jsonMessage.RootElement;
+
+        //            if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
+        //            {
+        //                throw new InvalidOperationException("Invalid message format.");
+        //            }
+
+        //            JsonElement tradeElement = rootElement[2];
+
+        //            if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 12)
+        //            {
+        //                var tradeUpdate = new BitfinexMyTradeUpdate
+        //                {
+        //                    Id = tradeElement[0].ToString(),
+        //                    Symbol = tradeElement[1].ToString(),
+        //                    MtsCreate = tradeElement[2].ToString(),
+        //                    OrderId = tradeElement[3].ToString(),
+        //                    ExecAmount = tradeElement[4].ToString(),
+        //                    ExecPrice = tradeElement[5].ToString(),
+        //                    OrderType = tradeElement[6].ToString(),
+        //                    OrderPrice = tradeElement[7].ToString(),
+        //                    Maker = tradeElement[8].ToString(),
+        //                    Fee = tradeElement[9].ValueKind.ToString(), //== JsonValueKind.Null ? (double?)null : tradeElement[9].GetDouble(),
+        //                    FeeCurrency = tradeElement[10].ToString(),
+        //                    Cid = tradeElement[11].ToString()
+        //                };
+
+        //                Trade newTrade = new Trade
+        //                {
+        //                    SecurityNameCode = _currentSymbol,
+        //                    Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
+        //                    Id = tradeUpdate.Id,
+        //                    Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
+        //                    Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
+        //                    Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
+        //                };
+
+        //                ServerTime = newTrade.Time;
+        //                NewTradesEvent?.Invoke(newTrade);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        SendLogMessage(exception.ToString(), LogMessageType.Error);
+        //    }
+        //}
+
+
         //public void ProcessTradeSnapshotMessage(JsonElement snapshotElement, int channelId)
         //{
         //    try
         //    {
-        //        //JsonDocument jsonMessage = JsonDocument.Parse(message);
-        //        //JsonElement jsonElement = jsonMessage.RootElement;
-
-        //        //if (jsonElement.ValueKind != JsonValueKind.Array)
-        //        //{
-        //        //    throw new InvalidOperationException("Expected a JSON array at the root element.");
-        //        //}
-
-        //        //// Check if the second element is an array
-        //        //if (jsonElement[1].ValueKind != JsonValueKind.Array)
-        //        //{
-        //        //    throw new InvalidOperationException("Expected a JSON array at the second element.");
-        //        //}
-
-        //        //int channelId = jsonElement[0].GetInt32();
-        //        // JsonElement snapshotElement = jsonElement[1];
-
         //        if (snapshotElement.ValueKind != JsonValueKind.Array)
         //        {
         //            throw new InvalidOperationException("Expected a JSON array at the second element.");
@@ -1233,129 +1565,55 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         //        var snapshot = new TradeSnapshot
         //        {
-        //            ChannelId = (channelId).ToString(),
+        //            ChannelId = channelId.ToString(),
         //            Trades = trades
         //        };
 
-
-
-
-
-        //        //JsonElement tradeElement = jsonElement[1];
-        //        //int tradeCount = tradeElement.GetArrayLength();
-
-
-
-        //        //for (int i = 0; i < tradeCount; i++)
-        //        //{
-        //        //    JsonElement tradeArray = tradeElement[i];
-
-        //        //    if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 4)
-        //        //    {
-
-        //        //        //var trade = new BitfinexTrades
-        //        //        //{
-        //        //        //    Id = tradeElement[0].ToString(),
-        //        //        //    Mts = tradeElement[1].ToString(),
-        //        //        //    Amount = tradeElement[2].ToString(),
-        //        //        //    Price = tradeElement[3].ToString()
-
-        //        //        //};
-        //        //        var trade = new BitfinexTrades
-        //        //        {
-        //        //            Id = tradeArray[0].ToString(),
-        //        //            Mts = tradeArray[1].ToString(),
-        //        //            Amount = tradeArray[2].ToString(),
-        //        //            Price = tradeArray[3].ToString()
-        //        //        };
-
-        //        //        trades.Add(trade);
-        //        //    }
-        //        //}
-        //        //TradeSnapshot snapshot = new TradeSnapshot
-        //        //{
-        //        //    ChannelId = jsonElement[0].ToString(),
-        //        //    Trades = trades
-
-        //        //};
-
-
+        //        // Further processing if needed
         //    }
         //    catch (Exception exception)
         //    {
         //        SendLogMessage(exception.ToString(), LogMessageType.Error);
         //    }
         //}
+        ///////////////
 
-
-
-        //public void ProcessTradeExecutedMessage(string message)
-        //// public void ProcessTradeExecutedMessage( JsonElement snapshotElement)
+        //public void ProcessTradeExecutedMessage(JsonElement rootElement)
         //{
         //    try
         //    {
-        //        using (JsonDocument jsonMessage = JsonDocument.Parse(message))
+
+
+        //        if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
         //        {
-        //            JsonElement tradeArray = jsonMessage.RootElement;
-
-        //            JsonElement snapshotElement = tradeArray[1];
-
-        //            //JsonElement tradeElement = jsonElement[1];
-        //            //int tradeCount = tradeElement.GetArrayLength();
+        //            throw new InvalidOperationException("Invalid message format.");
+        //        }
 
 
+        //        var trades = new List<BitfinexMyTradeUpdate>();
+        //        for (int i = 0; i < rootElement.GetArrayLength(); i++)
+        //        {
+        //            //JsonElement updateElement = rootElement[i];
 
-        //            //for (int i = 0; i < tradeCount; i++)
-        //            //{
-        //            //    JsonElement tradeArray = tradeElement[i];
-
-        //            //    if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 4)
-        //            //    {
-
-
-        //            //// Проверяем, что rootElement является массивом и содержит как минимум 3 элемента
-        //            //if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
-        //            //{
-        //            //    throw new InvalidOperationException("Invalid message format.");
-        //            //}
-
-
-        //            //// Проверяем, что третий элемент также является массивом
-        //            //if (tradeArray.ValueKind != JsonValueKind.Array)
-        //            //{
-        //            //    throw new InvalidOperationException("Expected a JSON array at the third element.");
-        //            //}
-
-
-        //            var trades = new List<BitfinexMyTradeUpdate>();
-
-        //            for (int i = 0; i < snapshotElement.GetArrayLength(); i++)
+        //            if (updateElement.ValueKind == JsonValueKind.Array && updateElement.GetArrayLength() == 11)
         //            {
-        //                JsonElement tradeElement = snapshotElement[i];
-
-        //                if (snapshotElement.ValueKind == JsonValueKind.Array && snapshotElement.GetArrayLength() = 4)
+        //                var tradeUpdate = new BitfinexMyTradeUpdate
         //                {
-        //                    var trade = new BitfinexTrades
-        //                    {
-        //                        Id = tradeElement[0].ToString(),
-        //                        Mts = tradeElement[1].ToString(),
-        //                        Amount = tradeElement[2].ToString(),
-        //                        Price = tradeElement[3].ToString()
-        //                    };
-
-        //                    Trade newTrade = new Trade
-        //                    {
-        //                        SecurityNameCode = _currentSymbol,
-        //                        Price = Convert.ToDecimal(trade.Price),
-        //                        Id = trade.Id,
-        //                        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(trade.Mts)),
-        //                        Volume = Math.Abs(Convert.ToDecimal(trade.Amount)),
-        //                        Side = Math.Abs(Convert.ToDecimal(trade.Amount)) > 0 ? Side.Buy : Side.Sell
-        //                    };
-
-        //                    ServerTime = newTrade.Time;
-        //                    NewTradesEvent?.Invoke(newTrade);
-        //                }
+        //                    Id = updateElement[0].ToString(),
+        //                    Symbol = updateElement[1].ToString(),
+        //                    MtsCreate = updateElement[2].ToString(),
+        //                    OrderId = updateElement[3].ToString(),
+        //                    ExecAmount = updateElement[4].ToString(),
+        //                    ExecPrice = updateElement[5].ToString(),
+        //                    OrderType = updateElement[6].ToString(),
+        //                    OrderPrice = updateElement[7].ToString(),
+        //                    Maker = updateElement[8].ToString(),
+        //                    Fee = updateElement[9].ValueKind.ToString(),
+        //                    FeeCurrency = updateElement[10].ToString(),
+        //                    Cid = updateElement[11].ToString()
+        //                };
+        //                trades.Add(tradeUpdate);
+        //                fghjk(tradeUpdate);
         //            }
         //        }
         //    }
@@ -1365,117 +1623,66 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
         //}
 
+        private void fghjk(BitfinexMyTradeUpdate tradeUpdate)
+        {
+            Trade newTrade = new Trade
+            {
+                SecurityNameCode = _currentSymbol,
+                Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
+                Id = tradeUpdate.Id,
+                Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
+                Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
+                Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
+            };
 
+            ServerTime = newTrade.Time;
+            NewTradesEvent?.Invoke(newTrade);
+        }
 
-
-        /////////////////////////
-        /////
-
-
-        ////private  void HandleTradeUpdate(string tradeJson)
-        ////{
-        ////    try
-        ////    {
-        ////        using (JsonDocument tradeDoc = JsonDocument.Parse(tradeJson))
-        ////        {
-        ////            JsonElement tradeElement = tradeDoc.RootElement;
-        ////            var trade = new BitfinexTrades
-        ////            {
-        ////                Mts = tradeElement[1].GetString(),
-        ////                Id = tradeElement[0].GetString(),
-        ////                Amount = tradeElement[2].GetString(),
-        ////                Price = tradeElement[3].GetString()
-        ////            };
-
-        ////            Trade newTrade = new Trade
-        ////            {
-        ////                SecurityNameCode = _currentSymbol,
-        ////                Price = Convert.ToDecimal(trade.Price),
-        ////                Id = trade.Id,
-        ////                Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(trade.Mts)),
-        ////                Volume = Math.Abs(Convert.ToDecimal(trade.Amount)),
-        ////                Side = Math.Abs(Convert.ToDecimal(trade.Amount)) > 0 ? Side.Buy : Side.Sell
-        ////            };
-
-        ////            ServerTime = newTrade.Time;
-        ////            NewTradesEvent?.Invoke(newTrade);
-        ////        }
-        ////    }
-        ////    catch (Exception error)
-        ////    {
-        ////        SendLogMessage(error.ToString(), LogMessageType.Error);
-        ////    }
-        ////}
-
-
-
-        ///// <summary>
-        ///// ///////////
-        ///// </summary>
-        ///// <param name="tradeElement"></param>
-        ////private void UpdateTrades(JsonElement tradeElement)
-        ////{
-        ////    try
-        ////    {
-        ////        var trade = new BitfinexMyTradeUpdate
-        ////        {
-        ////            MtsCreate = tradeElement[2].ToString(),
-        ////            Id = tradeElement[0].ToString(),
-        ////            ExecAmount = tradeElement[4].ToString(),
-        ////            OrderPrice = tradeElement[7].ToString()
-        ////        };
-
-        ////        Trade newTrade = new Trade
-        ////        {
-        ////            SecurityNameCode = _currentSymbol,
-        ////            Price = Convert.ToDecimal(trade.OrderPrice),
-        ////            Id = trade.Id,
-        ////            Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(trade.MtsCreate)),
-        ////            Volume = Math.Abs(Convert.ToDecimal(trade.ExecAmount)),
-        ////            Side = Math.Abs(Convert.ToDecimal(trade.ExecAmount)) > 0 ? Side.Buy : Side.Sell
-        ////        };
-
-        ////        ServerTime = newTrade.Time;
-
-        ////        NewTradesEvent?.Invoke(newTrade);
-        ////    }
-        ////    catch (Exception error)
-        ////    {
-        ////        SendLogMessage(error.ToString(), LogMessageType.Error);
-        ////    }
-        ////}
-
-
-
-        //private void ProcessBookSnapshotMessage(JsonElement book, string symbol)
+        //private void ProcessBookSnapshotMessage(JsonElement entriesElement, int channelId)
         //{
         //    try
         //    {
-        //        int count = book.GetArrayLength();
+        //        List<BitfinexBookEntry> bookEntries = new List<BitfinexBookEntry>();
+
+        //        int count = entriesElement.GetArrayLength();
         //        for (int i = 0; i < count; i++)
         //        {
-        //            var entryArray = book[i];
-        //            if (entryArray.ValueKind == JsonValueKind.Array && entryArray.GetArrayLength() == 3)
+
+        //            JsonElement entryElement = entriesElement[i];
+
+        //            if (entryElement.ValueKind == JsonValueKind.Array && entryElement.GetArrayLength() == 3)
         //            {
-        //                var entry = new List<object>
-        //            {
-        //                entryArray[0].GetDecimal(),
-        //                entryArray[1].GetDecimal(),
-        //                entryArray[2].GetDecimal()
-        //            };
-        //                ProcessBookEntry(entry, symbol);
+        //                BitfinexBookEntry entry = new BitfinexBookEntry
+        //                {
+        //                    Price = entryElement[0].ToString(),
+        //                    Count = entryElement[1].ToString(),
+        //                    Amount = entryElement[2].ToString()
+        //                };
+
+        //                bookEntries.Add(entry);
+        //                //ProcessBookEntry(entryElement, symbol);
         //            }
         //        }
+        //        // Создание объекта снимка книги и заполнение его данными
+        //        BitfinexBookSnapshot bookSnapshot = new BitfinexBookSnapshot
+        //        {
+        //            ChannelId = channelId.ToString(),
+        //            BookEntries = bookEntries
+        //        };
         //    }
         //    catch (Exception exception)
         //    {
         //        SendLogMessage(exception.ToString(), LogMessageType.Error);
         //    }
         //}
-        //private void ProcessBookEntry(List<object> entry, string symbol)
+
+        //private void ProcessBookEntry(JsonElement entry, string symbol)
         //{
-        //    if (entry.Count == 3)
+        //    // Проверяем, что элемент является массивом и его длина равна 3
+        //    if (entry.ValueKind == JsonValueKind.Array && entry.GetArrayLength() == 3)
         //    {
+        //        // Создаем новый объект BitfinexBookEntry и заполняем его данными из массива
         //        var book = new BitfinexBookEntry
         //        {
         //            Price = entry[0].ToString(),
@@ -1483,9 +1690,13 @@ namespace OsEngine.Market.Servers.Bitfinex
         //            Amount = entry[2].ToString(),
         //        };
 
-        //        if ((book.Count).ToString().ToDecimal() == 0)
+
+
+        //        // Проверяем, если количество равно 0
+        //        if (Convert.ToDecimal(book.Count) == 0)
         //        {
-        //            if ((book.Amount).ToString().ToDecimal() > 0)
+        //            // Если количество больше 0, то удаляем соответствующую заявку из списка глубины покупок
+        //            if (Convert.ToDecimal(book.Amount) > 0)
         //            {
         //                for (int i = 0; i < depthBids.Count; i++)
         //                {
@@ -1498,6 +1709,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //            }
         //            else
         //            {
+        //                // Если количество меньше или равно 0, то удаляем соответствующую заявку из списка глубины продаж
         //                for (int i = 0; i < depthAsks.Count; i++)
         //                {
         //                    if (depthAsks[i].Price == book.Price)
@@ -1508,9 +1720,10 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                }
         //            }
         //        }
-        //        else
+        //        else   // Если количество не равно 0
         //        {
-        //            if ((book.Amount).ToString().ToDecimal() > 0)
+        //            // Если количество больше 0, то обновляем или добавляем заявку в список глубины покупок
+        //            if (Convert.ToDecimal(book.Amount) > 0)
         //            {
         //                bool updated = false;
         //                for (int i = 0; i < depthBids.Count; i++)
@@ -1527,7 +1740,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                    depthBids.Add(book);
         //                }
         //            }
-        //            else
+        //            else// Если количество меньше или равно 0, то обновляем или добавляем заявку в список глубины продаж
         //            {
         //                bool updated = false;
         //                for (int i = 0; i < depthAsks.Count; i++)
@@ -1545,7 +1758,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                }
         //            }
         //        }
-
+        //        // Создаем новый объект MarketDepth и заполняем его данными из списков глубины покупок и продаж
         //        MarketDepth newMarketDepth = new MarketDepth
         //        {
         //            SecurityNameCode = _currentSymbol,
@@ -1556,498 +1769,31 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         //        for (int i = 0; i < depthBids.Count; i++)
         //        {
+        //            // Заполняем список заявок на покупку в объекте MarketDepth
+
         //            var bid = depthBids[i];
         //            newMarketDepth.Bids.Add(new MarketDepthLevel
         //            {
-        //                Price = (bid.Price).ToString().ToDecimal(),
-        //                Bid = (bid.Amount).ToString().ToDecimal()
+        //                Price = Convert.ToDecimal(bid.Price),
+        //                Bid = Convert.ToDecimal(bid.Amount)
         //            });
         //        }
 
         //        for (int i = 0; i < depthAsks.Count; i++)
         //        {
+        //            // Заполняем список заявок на продажу в объекте MarketDepth
+
         //            var ask = depthAsks[i];
         //            newMarketDepth.Asks.Add(new MarketDepthLevel
         //            {
-        //                Price = (ask.Price).ToString().ToDecimal(),
-        //                Ask = Math.Abs((ask.Amount).ToString().ToDecimal())
+        //                Price = Convert.ToDecimal(ask.Price),
+        //                Ask = Math.Abs(Convert.ToDecimal(ask.Amount))
         //            });
         //        }
-
+        //        // Вызываем событие MarketDepthEvent с обновленными данными глубины рынка
         //        MarketDepthEvent?.Invoke(newMarketDepth);
         //    }
         //}
-
-        /// <summary>
-        /// //77777777777777777777777777777777777777777
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-
-
-        private void ProcessMessage(string message, string symbol)
-        {
-            try
-            {
-                using (JsonDocument jsonMessage = JsonDocument.Parse(message))
-                {
-                    JsonElement jsonElement = jsonMessage.RootElement;
-
-                    if (jsonElement.ValueKind == JsonValueKind.Object)
-                    {
-                        var eventType = jsonElement.GetProperty("event").GetString();
-                        if (eventType == "info" || eventType == "auth" || eventType == "hb")
-                        {
-                            return;
-                        }
-                    }
-                    else if (jsonElement.ValueKind == JsonValueKind.Array)
-                    {
-                        int channelId = jsonElement[0].GetInt32();
-                        var secondElement = jsonElement[1];
-
-                        if (secondElement.ValueKind == JsonValueKind.String)
-                        {
-                            string messageTypeString = secondElement.GetString();
-
-                            if (messageTypeString == "te")
-                            {
-                                HandleTradeExecuted(jsonElement[2].GetRawText());
-                            }
-                            else if (messageTypeString == "tu")
-                            {
-                                HandleTradeUpdate(jsonElement[2].GetRawText());
-                            }
-                        }
-                        else if (secondElement.ValueKind == JsonValueKind.Array)
-                        {
-                            if (channelId == tradeChannelId)
-                            {
-                                ProcessTradeSnapshotMessage(secondElement, channelId);
-                            }
-                            else if (channelId == bookChannelId)
-                            {
-                                ProcessBookSnapshotMessage(secondElement, channelId);
-                            }
-
-                            for (int i = 0; i < secondElement.GetArrayLength(); i++)
-                            {
-                                JsonElement entryArray = secondElement[i];
-
-                                if (entryArray.ValueKind == JsonValueKind.Array)
-                                {
-                                    if (entryArray.GetArrayLength() == 3)
-                                    {
-                                        var entry = new BitfinexMarketDepth
-                                        {
-                                            Price = entryArray[0].ToString(),
-                                            Count = entryArray[1].ToString(),
-                                            Amount = entryArray[2].ToString()
-                                        };
-                                        ProcessBookEntry(entryArray, symbol);
-                                    }
-                                    else if (entryArray.GetArrayLength() == 4)
-                                    {
-                                        var entry = new BitfinexTrades
-                                        {
-                                            Id = entryArray[0].ToString(),
-                                            Mts = entryArray[1].ToString(),
-                                            Amount = entryArray[2].ToString(),
-                                            Price = entryArray[3].ToString()
-                                        };
-
-                                        ProcessTradeExecutedMessage(entryArray);
-                                    }
-                                }
-                            }
-                        }
-                        else if (jsonElement.GetArrayLength() == 2 && secondElement.ValueKind == JsonValueKind.Array)
-                        {
-                            JsonElement singleEntryArray = secondElement;
-
-                            if (singleEntryArray.GetArrayLength() == 3)
-                            {
-                                var entry = new BitfinexMarketDepth
-                                {
-                                    Price = singleEntryArray[0].ToString(),
-                                    Count = singleEntryArray[1].ToString(),
-                                    Amount = singleEntryArray[2].ToString(),
-                                };
-                                ProcessBookEntry(singleEntryArray, symbol);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-        private void HandleTradeExecuted(string tradeExecutedMessage)
-        {
-            try
-            {
-                using (JsonDocument jsonMessage = JsonDocument.Parse(tradeExecutedMessage))
-                {
-                    JsonElement rootElement = jsonMessage.RootElement;
-
-                    if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
-                    {
-                        throw new InvalidOperationException("Invalid message format.");
-                    }
-
-                    JsonElement tradeElement = rootElement[2];
-
-                    if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 12)
-                    {
-                        var tradeUpdate = new BitfinexMyTradeUpdate
-                        {
-                            Id = tradeElement[0].ToString(),
-                            Symbol = tradeElement[1].ToString(),
-                            MtsCreate = tradeElement[2].ToString(),
-                            OrderId = tradeElement[3].ToString(),
-                            ExecAmount = tradeElement[4].ToString(),
-                            ExecPrice = tradeElement[5].ToString(),
-                            OrderType = tradeElement[6].ToString(),
-                            OrderPrice = tradeElement[7].ToString(),
-                            Maker = tradeElement[8].ToString(),
-                            Fee = (tradeElement[9].ValueKind).ToString(),// == JsonValueKind.Null ? (double?)null : tradeElement[9].GetDouble(),
-                            FeeCurrency = tradeElement[10].ToString(),
-                            Cid = tradeElement[11].ToString()
-                        };
-
-                        Trade newTrade = new Trade
-                        {
-                            SecurityNameCode = _currentSymbol,
-                            Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
-                            Id = tradeUpdate.Id,
-                            Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
-                            Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
-                            Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
-                        };
-
-                        ServerTime = newTrade.Time;
-                        NewTradesEvent?.Invoke(newTrade);
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-
-        private void HandleTradeUpdate(string tradeUpdateMessage)
-        {
-            try
-            {
-                using (JsonDocument jsonMessage = JsonDocument.Parse(tradeUpdateMessage))
-                {
-                    JsonElement rootElement = jsonMessage.RootElement;
-
-                    if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
-                    {
-                        throw new InvalidOperationException("Invalid message format.");
-                    }
-
-                    JsonElement tradeElement = rootElement[2];
-
-                    if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 12)
-                    {
-                        var tradeUpdate = new BitfinexMyTradeUpdate
-                        {
-                            Id = tradeElement[0].ToString(),
-                            Symbol = tradeElement[1].ToString(),
-                            MtsCreate = tradeElement[2].ToString(),
-                            OrderId = tradeElement[3].ToString(),
-                            ExecAmount = tradeElement[4].ToString(),
-                            ExecPrice = tradeElement[5].ToString(),
-                            OrderType = tradeElement[6].ToString(),
-                            OrderPrice = tradeElement[7].ToString(),
-                            Maker = tradeElement[8].ToString(),
-                            Fee = tradeElement[9].ValueKind.ToString(), //== JsonValueKind.Null ? (double?)null : tradeElement[9].GetDouble(),
-                            FeeCurrency = tradeElement[10].ToString(),
-                            Cid = tradeElement[11].ToString()
-                        };
-
-                        Trade newTrade = new Trade
-                        {
-                            SecurityNameCode = _currentSymbol,
-                            Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
-                            Id = tradeUpdate.Id,
-                            Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
-                            Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
-                            Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
-                        };
-
-                        ServerTime = newTrade.Time;
-                        NewTradesEvent?.Invoke(newTrade);
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-
-        public void ProcessTradeSnapshotMessage(JsonElement snapshotElement, int channelId)
-        {
-            try
-            {
-                if (snapshotElement.ValueKind != JsonValueKind.Array)
-                {
-                    throw new InvalidOperationException("Expected a JSON array at the second element.");
-                }
-
-                var trades = new List<BitfinexTrades>();
-
-                for (int i = 0; i < snapshotElement.GetArrayLength(); i++)
-                {
-                    JsonElement tradeElement = snapshotElement[i];
-
-                    if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 4)
-                    {
-                        var trade = new BitfinexTrades
-                        {
-                            Id = tradeElement[0].ToString(),
-                            Mts = tradeElement[1].ToString(),
-                            Amount = tradeElement[2].ToString(),
-                            Price = tradeElement[3].ToString()
-                        };
-
-                        trades.Add(trade);
-                    }
-                }
-
-                var snapshot = new TradeSnapshot
-                {
-                    ChannelId = channelId.ToString(),
-                    Trades = trades
-                };
-
-                // Further processing if needed
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-        //  public void ProcessTradeExecutedMessage(string message)
-        public void ProcessTradeExecutedMessage(JsonElement rootElement)
-        {
-            try
-            {
-                //using (JsonDocument jsonMessage = JsonDocument.Parse(message))
-                //{
-                //    JsonElement rootElement = jsonMessage.RootElement;
-
-                if (rootElement.ValueKind != JsonValueKind.Array || rootElement.GetArrayLength() < 3)
-                {
-                    throw new InvalidOperationException("Invalid message format.");
-                }
-
-                JsonElement tradeElement = rootElement[2];
-
-                if (tradeElement.ValueKind == JsonValueKind.Array && tradeElement.GetArrayLength() == 11)
-                {
-                    var tradeUpdate = new BitfinexMyTradeUpdate
-                    {
-                        Id = tradeElement[0].ToString(),
-                        Symbol = tradeElement[1].ToString(),
-                        MtsCreate = tradeElement[2].ToString(),
-                        OrderId = tradeElement[3].ToString(),
-                        ExecAmount = tradeElement[4].ToString(),
-                        ExecPrice = tradeElement[5].ToString(),
-                        OrderType = tradeElement[6].ToString(),
-                        OrderPrice = tradeElement[7].ToString(),
-                        Maker = tradeElement[8].ToString(),
-                        Fee = tradeElement[9].ValueKind.ToString(),
-                        FeeCurrency = tradeElement[10].ToString(),
-                        Cid = tradeElement[11].ToString()
-                    };
-
-                    Trade newTrade = new Trade
-                    {
-                        SecurityNameCode = _currentSymbol,
-                        Price = Convert.ToDecimal(tradeUpdate.ExecPrice),
-                        Id = tradeUpdate.Id,
-                        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.MtsCreate)),
-                        Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)),
-                        Side = Math.Abs(Convert.ToDecimal(tradeUpdate.ExecAmount)) > 0 ? Side.Buy : Side.Sell
-                    };
-
-                    ServerTime = newTrade.Time;
-                    NewTradesEvent?.Invoke(newTrade);
-                }
-                //}
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-        private void ProcessBookSnapshotMessage(JsonElement entriesElement,int channelId)
-        {
-            try
-            {
-                List<BitfinexBookEntry> bookEntries = new List<BitfinexBookEntry>();
-
-                int count = entriesElement.GetArrayLength();
-                for (int i = 0; i < count; i++)
-                {
-                    
-                    JsonElement entryElement = entriesElement[i];
-
-                    if (entryElement.ValueKind == JsonValueKind.Array && entryElement.GetArrayLength() == 3)
-                    {
-                        BitfinexBookEntry entry = new BitfinexBookEntry
-                        {
-                            Price = entryElement[0].ToString(),
-                            Count = entryElement[1].ToString(),
-                            Amount = entryElement[2].ToString()
-                        };
-
-                        bookEntries.Add(entry);
-                        //ProcessBookEntry(entryElement, symbol);
-                    }
-                }
-                // Создание объекта снимка книги и заполнение его данными
-                BitfinexBookSnapshot bookSnapshot = new BitfinexBookSnapshot
-                {
-                    ChannelId = channelId.ToString(),
-                    BookEntries = bookEntries
-                };
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
-        }
-
-        private void ProcessBookEntry(JsonElement entry, string symbol)
-        {
-            // Проверяем, что элемент является массивом и его длина равна 3
-            if (entry.ValueKind == JsonValueKind.Array && entry.GetArrayLength() == 3)
-                {
-                // Создаем новый объект BitfinexBookEntry и заполняем его данными из массива
-                var book = new BitfinexBookEntry
-                {
-                    Price = entry[0].ToString(),
-                    Count = entry[1].ToString(),
-                    Amount = entry[2].ToString(),
-                };
-
-
-
-                // Проверяем, если количество равно 0
-                if (Convert.ToDecimal(book.Count) == 0)
-                {
-                    // Если количество больше 0, то удаляем соответствующую заявку из списка глубины покупок
-                    if (Convert.ToDecimal(book.Amount) > 0)
-                    {
-                        for (int i = 0; i < depthBids.Count; i++)
-                        {
-                            if (depthBids[i].Price == book.Price)
-                            {
-                                depthBids.RemoveAt(i);
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Если количество меньше или равно 0, то удаляем соответствующую заявку из списка глубины продаж
-                        for (int i = 0; i < depthAsks.Count; i++)
-                        {
-                            if (depthAsks[i].Price == book.Price)
-                            {
-                                depthAsks.RemoveAt(i);
-                                break;
-                            }
-                        }
-                    }
-                }
-                else   // Если количество не равно 0
-                {
-                    // Если количество больше 0, то обновляем или добавляем заявку в список глубины покупок
-                    if (Convert.ToDecimal(book.Amount) > 0)
-                    {
-                        bool updated = false;
-                        for (int i = 0; i < depthBids.Count; i++)
-                        {
-                            if (depthBids[i].Price == book.Price)
-                            {
-                                depthBids[i] = book;
-                                updated = true;
-                                break;
-                            }
-                        }
-                        if (!updated)
-                        {
-                            depthBids.Add(book);
-                        }
-                    }
-                    else// Если количество меньше или равно 0, то обновляем или добавляем заявку в список глубины продаж
-                    {
-                        bool updated = false;
-                        for (int i = 0; i < depthAsks.Count; i++)
-                        {
-                            if (depthAsks[i].Price == book.Price)
-                            {
-                                depthAsks[i] = book;
-                                updated = true;
-                                break;
-                            }
-                        }
-                        if (!updated)
-                        {
-                            depthAsks.Add(book);
-                        }
-                    }
-                }
-                // Создаем новый объект MarketDepth и заполняем его данными из списков глубины покупок и продаж
-                MarketDepth newMarketDepth = new MarketDepth
-                {
-                    SecurityNameCode = _currentSymbol,
-                    Time = DateTime.UtcNow,
-                    Asks = new List<MarketDepthLevel>(),
-                    Bids = new List<MarketDepthLevel>()
-                };
-
-                for (int i = 0; i < depthBids.Count; i++)
-                { 
-                    // Заполняем список заявок на покупку в объекте MarketDepth
-
-                    var bid = depthBids[i];
-                    newMarketDepth.Bids.Add(new MarketDepthLevel
-                    {
-                        Price = Convert.ToDecimal(bid.Price),
-                        Bid = Convert.ToDecimal(bid.Amount)
-                    });
-                }
-
-                for (int i = 0; i < depthAsks.Count; i++)
-                { 
-                    // Заполняем список заявок на продажу в объекте MarketDepth
-
-                    var ask = depthAsks[i];
-                    newMarketDepth.Asks.Add(new MarketDepthLevel
-                    {
-                        Price = Convert.ToDecimal(ask.Price),
-                        Ask = Math.Abs(Convert.ToDecimal(ask.Amount))
-                    });
-                }
-                // Вызываем событие MarketDepthEvent с обновленными данными глубины рынка
-                MarketDepthEvent?.Invoke(newMarketDepth);
-            }
-        }
 
 
 
@@ -2459,7 +2205,53 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     if (message.StartsWith("["))
                     {
-                        ProcessMessage(message, _currentSymbol);
+                        var jsonDocument = JsonDocument.Parse(message);
+                        var root = jsonDocument.RootElement;
+
+                        if (root.ValueKind == JsonValueKind.Object)
+                        {
+                            var eventType = root.GetProperty("event").GetString();
+                            if (eventType == "info" || eventType == "auth" || eventType == "hb")
+                            {
+                                continue;
+                            }
+                        }
+                        if (root[0].ValueKind != JsonValueKind.Number)
+                        {
+                            SendLogMessage("Неверный формат Channel ID", LogMessageType.Error);
+                            return;
+                        }
+
+                        //// Извлечение Channel ID
+                        //int channelId = root[0].GetInt32();
+
+                        // Извлечение основного содержимого
+                        var secondElement = root[1];
+
+                        if (root[1].ValueKind == JsonValueKind.String)
+                        {
+                            string messageTypeString = root[1].GetString();
+
+                            if (messageTypeString == "te")
+                            {
+                                HandleTradeExecuted(root[1].GetRawText());//почему [2], а не [1]
+                            }
+                            else if (messageTypeString == "tu")
+                            {
+                                HandleTradeUpdate(root[1].GetRawText());
+                            }
+                        }
+
+
+
+
+
+                        if (root[0].ValueKind != JsonValueKind.Number)
+                        {
+                            SendLogMessage("Неверный формат Channel ID", LogMessageType.Error);
+                            return;
+                        }
+                        ProcessOrderBookResponse(message, _currentSymbol);
                     }
 
 
@@ -2495,7 +2287,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
             }
         }
-
+        
 
 
         private void PrivateMessageReader()

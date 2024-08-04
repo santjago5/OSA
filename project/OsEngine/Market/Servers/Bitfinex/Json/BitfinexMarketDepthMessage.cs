@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace OsEngine.Market.Servers.Bitfinex.Json
 {
-    public class BitfinexMarketDepth //Total amount available at that price level (if AMOUNT > 0 then bid else ask)
+    public class BitfinexMarketDepth///BookEntry //  //Total amount available at that price level (if AMOUNT > 0 then bid else ask)
     {
 
         public string Price { get; set; }
@@ -32,6 +32,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public List<BitfinexMarketDepth> bids;
 
         public List<BitfinexMarketDepth> asks;
+
     }
   
 }

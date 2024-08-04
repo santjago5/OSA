@@ -21,7 +21,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         // GET https://api-pub.bitfinex.com/v2/tickers?symbols=ALL
 
        
-       // public string Symbol { get; set; }                    //tBTCUSD //SYMBOL
+        public string Symbol { get; set; }                    //tBTCUSD //SYMBOL
 
         public string Bid { get; set; }                       //10645 //BID
 
