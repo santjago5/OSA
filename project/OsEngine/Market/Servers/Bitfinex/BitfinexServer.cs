@@ -29,6 +29,7 @@ using MarketDepth = OsEngine.Entity.MarketDepth;
 using System.Text.Json;
 using System.Globalization;
 using Timer = System.Timers.Timer;
+using System.Linq;
 
 
 
@@ -1300,8 +1301,9 @@ namespace OsEngine.Market.Servers.Bitfinex
             };
 
             // Перебор всех bid уровней и добавление их в новый стакан
-            foreach (var bid in depthBids)
+            for (int i = 0; i < depthBids.Count; i++)
             {
+                var bid = depthBids[i];
                 newMarketDepth.Bids.Add(new MarketDepthLevel
                 {
                     Price = Convert.ToDecimal(bid.Price),
@@ -1310,8 +1312,9 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
 
             // Перебор всех ask уровней и добавление их в новый стакан
-            foreach (var ask in depthAsks)
+            for (int i = 0; i < depthAsks.Count; i++)
             {
+                var ask = depthAsks[i];
                 newMarketDepth.Asks.Add(new MarketDepthLevel
                 {
                     Price = Convert.ToDecimal(ask.Price),
@@ -1322,6 +1325,40 @@ namespace OsEngine.Market.Servers.Bitfinex
             // Вызов события обновления стакана
             MarketDepthEvent?.Invoke(newMarketDepth);
         }
+        //private void UpdateOrderBook()
+        //{
+        //    // Создание нового объекта MarketDepth для обновления стакана
+        //    MarketDepth newMarketDepth = new MarketDepth
+        //    {
+        //        SecurityNameCode = _currentSymbol,
+        //        Time = DateTime.UtcNow,
+        //        Asks = new List<MarketDepthLevel>(),
+        //        Bids = new List<MarketDepthLevel>()
+        //    };
+
+        //    // Перебор всех bid уровней и добавление их в новый стакан
+        //    foreach (var bid in depthBids)
+        //    {
+        //        newMarketDepth.Bids.Add(new MarketDepthLevel
+        //        {
+        //            Price = Convert.ToDecimal(bid.Price),
+        //            Bid = Convert.ToDecimal(bid.Amount)
+        //        });
+        //    }
+
+        //    // Перебор всех ask уровней и добавление их в новый стакан
+        //    foreach (var ask in depthAsks)
+        //    {
+        //        newMarketDepth.Asks.Add(new MarketDepthLevel
+        //        {
+        //            Price = Convert.ToDecimal(ask.Price),
+        //            Ask = Math.Abs(Convert.ToDecimal(ask.Amount))
+        //        });
+        //    }
+
+        //    // Вызов события обновления стакана
+        //    MarketDepthEvent?.Invoke(newMarketDepth);
+        //}
 
 
 
@@ -1459,8 +1496,8 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                    Cid = tradeElement[11].ToString()
         //                };
 
-        
-           
+
+
 
         //                Trade newTrade = new Trade
         //                {
@@ -1628,7 +1665,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
         //}
 
-     
+
 
 
 
@@ -2103,52 +2140,61 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+
         private void ProcessTradeResponse(string message)
         {
-
             // Десериализация JSON-ответа в JsonDocument
             var jsonDocument = JsonDocument.Parse(message);
             var root = jsonDocument.RootElement;
 
             // Извлечение Channel ID и MSG_TYPE
             int channelId = root[0].GetInt32(); // CHANNEL_ID
-            string msgType = root[1].GetString(); // MSG_TYPE
+            var secondElement = root[1];
 
-            // Проверка типа сообщения (msgType должно быть "te" для обновления трейдов)
-            if (msgType == "te" || msgType == "tu")
+            // Проверка, является ли второй элемент массивом или строкой
+            if (secondElement.ValueKind == JsonValueKind.String)
             {
-                // Извлечение данных трейда
-                string tradeDataJson = root[2].GetRawText();
+                string msgType = secondElement.GetString(); // MSG_TYPE
 
-                // Десериализация данных трейда как списка объектов
-                var tradeList = JsonConvert.DeserializeObject<List<object>>(tradeDataJson);
-
-              
-                
-                // Создание объекта BitfinexTradeUpdate из списка
-                var trade = new BitfinexTradeUpdate
+                // Проверка типа сообщения (msgType должно быть "te" или "tu" для обновления трейдов)
+                if (msgType == "te" || msgType == "tu")
                 {
-                    Id = tradeList[0].ToString(),
-                    Timestamp = tradeList[1].ToString(),
-                    Amount = tradeList[2].ToString(),
-                    Price = tradeList[3].ToString()
-                };
+                    // Извлечение данных трейда
+                    var tradeDataElement = root[2];
 
-                // Обработка обновления трейда
-                UpdateTrade(trade);
+                    // Создание объекта BitfinexTradeUpdate из данных
+                    var trade = new BitfinexTradeUpdate
+                    {
+                        Id = tradeDataElement[0].ToString(),
+                        Timestamp = tradeDataElement[1].ToString(),
+                        Amount = tradeDataElement[2].ToString(),
+                        Price = tradeDataElement[3].ToString()
+                    };
+
+                    // Обработка обновления трейда
+                    UpdateTrade(trade);
+                }
+                else
+                {
+                    SendLogMessage("Неизвестный тип сообщения: " + msgType, LogMessageType.Error);
+                }
             }
-           
-      
-             else if (root[1].ValueKind == JsonValueKind.Array)
+            else if (secondElement.ValueKind == JsonValueKind.Array)
             {
                 // Это снимок (snapshot)
-                var tradeArray = root[1].EnumerateArray();
+                var tradeArray = secondElement.EnumerateArray().ToList();
 
-                // Перебор всех записей в снимке
-                var tradeList = new List<BitfinexTradeUpdate>();
-                foreach (var tradeElement in tradeArray)
+                // Подсчёт количества элементов в массиве
+                int tradeCount = tradeArray.Count;
+
+                // Использование цикла for для итерации по массиву
+                List<BitfinexTradeUpdate> tradeList = new List<BitfinexTradeUpdate>();
+
+                for (int i = 0; i < tradeCount; i++)
                 {
-                    // Десериализация данных трейда как списка объектов
+                    var tradeElement = tradeArray[i];
+
+                    // Создание объекта BitfinexTradeUpdate из данных
                     var trade = new BitfinexTradeUpdate
                     {
                         Id = tradeElement[0].ToString(),
@@ -2168,6 +2214,73 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
             }
         }
+
+
+        //private void ProcessTradeResponse(string message)
+        //{
+
+        //    // Десериализация JSON-ответа в JsonDocument
+        //    var jsonDocument = JsonDocument.Parse(message);
+        //    var root = jsonDocument.RootElement;
+
+        //    // Извлечение Channel ID и MSG_TYPE
+        //    int channelId = root[0].GetInt32(); // CHANNEL_ID
+        //    string msgType = root[1].GetString(); // MSG_TYPE
+
+        //    // Проверка типа сообщения (msgType должно быть "te" для обновления трейдов)
+        //    if (msgType == "te" || msgType == "tu")
+        //    {
+        //        // Извлечение данных трейда
+        //        string tradeDataJson = root[2].GetRawText();
+
+        //        // Десериализация данных трейда как списка объектов
+        //        var tradeList = JsonConvert.DeserializeObject<List<object>>(tradeDataJson);
+
+
+
+        //        // Создание объекта BitfinexTradeUpdate из списка
+        //        var trade = new BitfinexTradeUpdate
+        //        {
+        //            Id = tradeList[0].ToString(),
+        //            Timestamp = tradeList[1].ToString(),
+        //            Amount = tradeList[2].ToString(),
+        //            Price = tradeList[3].ToString()
+        //        };
+
+        //        // Обработка обновления трейда
+        //        UpdateTrade(trade);
+        //    }
+
+
+        //     else if (root[1].ValueKind == JsonValueKind.Array)
+        //    {
+        //        // Это снимок (snapshot)
+        //        var tradeArray = root[1].EnumerateArray();
+
+        //        // Перебор всех записей в снимке
+        //        var tradeList = new List<BitfinexTradeUpdate>();
+        //        foreach (var tradeElement in tradeArray)
+        //        {
+        //            // Десериализация данных трейда как списка объектов
+        //            var trade = new BitfinexTradeUpdate
+        //            {
+        //                Id = tradeElement[0].ToString(),
+        //                Timestamp = tradeElement[1].ToString(),
+        //                Amount = tradeElement[2].ToString(),
+        //                Price = tradeElement[3].ToString()
+        //            };
+
+        //            tradeList.Add(trade);
+        //        }
+
+        //        // Обработка снимка
+        //        ProcessSnapshot(tradeList);
+        //    }
+        //    else
+        //    {
+        //        SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
+        //    }
+        //}
 
         private void ProcessSnapshot(List<BitfinexTradeUpdate> tradeList)
         {
