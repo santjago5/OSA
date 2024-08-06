@@ -18,7 +18,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Gid { get; set; }//GID Group Order ID
         public string Cid { get; set; }//1678987199446, //CID Client Order ID
         public string Symbol { get; set; }//"tBTCUSD", //SYMBOL
-        public string MtsCreate { get; set; }
+        public string MtsCreate { get; set; }//1678988263843, //MTS_CREATE
         public string MtsUpdate { get; set; } //1678988263843, //MTS_UPDATE
         public string Amount { get; set; }// 0.25, //AMOUNT
         public string AmountOrig { get; set; }//    0.1, //AMOUNT_ORIG
@@ -59,6 +59,24 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     //TRAILING STOP, EXCHANGE TRAILING STOP, FOK, EXCHANGE FOK, IOC, 
     //EXCHANGE IOC.
 
+}
+
+public enum BitfinexOrderType
+{
+    LIMIT,              // Лимитный ордер
+    EXCHANGE_LIMIT,     // Лимитный ордер на бирже
+    MARKET,             // Рыночный ордер
+    EXCHANGE_MARKET,    // Рыночный ордер на бирже
+    STOP,               // Стоп-ордер
+    EXCHANGE_STOP,      // Стоп-ордер на бирже
+    STOP_LIMIT,         // Стоп-лимитный ордер
+    EXCHANGE_STOP_LIMIT,// Стоп-лимитный ордер на бирже
+    TRAILING_STOP,      // Трейлинг-стоп ордер
+    EXCHANGE_TRAILING_STOP, // Трейлинг-стоп ордер на бирже
+    FOK,                // Fill or Kill ордер
+    EXCHANGE_FOK,       // Fill or Kill ордер на бирже
+    IOC,                // Immediate or Cancel ордер
+    EXCHANGE_IOC        // Immediate or Cancel ордер на бирже
 }
 
 enum orderType
