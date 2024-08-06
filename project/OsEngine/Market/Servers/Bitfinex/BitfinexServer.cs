@@ -27,14 +27,6 @@ using SuperSocket.ClientEngine;
 using Trade = OsEngine.Entity.Trade;
 using MarketDepth = OsEngine.Entity.MarketDepth;
 using System.Text.Json;
-using OsEngine.Market.Servers.Bitfinex.BitfitnexEntity;
-using System.Text.Json.Serialization;
-using Newtonsoft.Json.Linq;
-using static Google.Protobuf.Reflection.FieldOptions.Types;
-using Tinkoff.InvestApi.V1;
-using OsEngine.Market.Servers.Pionex.Entity;
-using OsEngine.Charts.CandleChart.Indicators;
-using Google.Protobuf.WellKnownTypes;
 using System.Globalization;
 using Timer = System.Timers.Timer;
 
