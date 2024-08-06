@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using WebSocket4Net;
+using System.Timers;
 using Order = OsEngine.Entity.Order;
 using Security = OsEngine.Entity.Security;
 using BitfinexSecurity = OsEngine.Market.Servers.Bitfinex.Json.BitfinexSecurity;
@@ -35,6 +36,7 @@ using OsEngine.Market.Servers.Pionex.Entity;
 using OsEngine.Charts.CandleChart.Indicators;
 using Google.Protobuf.WellKnownTypes;
 using System.Globalization;
+using Timer = System.Timers.Timer;
 
 
 
@@ -152,8 +154,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage("Connection closed by Bitfinex. WebSocket Data Closed Event" + exception.ToString(), LogMessageType.System);
             }
 
-            //WebSocketPublicMessage = new ConcurrentQueue<string>();//?????
-            //WebSocketPrivateMessage = new ConcurrentQueue<string>();//?????
+           
 
             if (ServerStatus != ServerConnectStatus.Disconnect)
             {
@@ -842,15 +843,25 @@ namespace OsEngine.Market.Servers.Bitfinex
         private WebSocket _webSocketPublic;
         private WebSocket _webSocketPrivate;
 
-
+      
 
         private readonly string _webSocketPublicUrl = "wss://api-pub.bitfinex.com/ws/2";
         private readonly string _webSocketPrivateUrl = "wss://api.bitfinex.com/ws/2";
+        private Timer _pingTimer;
+        // Set up a timer to send pings every 15 seconds
+
 
         private void CreateWebSocketConnection()
         {
             try
             {
+               
+                _pingTimer = new Timer(15000); // 15 seconds
+                _pingTimer.Elapsed += SendPing;
+                _pingTimer.AutoReset = true;
+             
+
+                
                 //_subscriptionsPublic.Clear();
                 //_subscriptionsPrivate.Clear();
 
@@ -970,8 +981,23 @@ namespace OsEngine.Market.Servers.Bitfinex
         #region  7 WebSocket events
 
         private static WebSocket websocket;
+
+
+        private void SendPing(object sender, ElapsedEventArgs e)
+        {
+            var pingMessage = new
+            {
+                @event = "ping",
+                cid = 1234
+            };
+
+            string jsonPing = JsonConvert.SerializeObject(pingMessage);
+            _webSocketPublic.Send(jsonPing);
+           
+        }
         private void WebSocketPublic_Opened(object sender, EventArgs e)
         {
+            _pingTimer.Start();////////////////////////
 
             _socketPublicIsActive = true;//отвечает за соединение
 
@@ -984,6 +1010,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
+                _pingTimer.Stop();
 
                 if (ServerStatus != ServerConnectStatus.Disconnect)
                 {
@@ -1665,6 +1692,9 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void CheckActivationSockets()
         {
+
+            
+
             if (_socketPublicIsActive == false)
             {
                 return;
@@ -2033,8 +2063,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                         }
                        // if (root[0].ValueKind == JsonValueKind.Array)
 
-                       if(root[0].ValueKind == JsonValueKind.Array &&root[1].ValueKind == JsonValueKind.Array)
-                       {
+                      // if(root[0].ValueKind == JsonValueKind.Array && root[1].ValueKind == JsonValueKind.Array)
+                            if (root[0].ValueKind == JsonValueKind.Number && root[1].ValueKind == JsonValueKind.Array)
+                            {
+
+                                
                          ProcessOrderBookResponse(message, _currentSymbol);
                        }
                             
@@ -2176,7 +2209,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                 decimal amount;
                 try
                 {
-                    amount = decimal.Parse(tradeUpdate.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);
+                    amount = decimal.Parse(tradeUpdate.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);//Параметр NumberStyles.Float указывает, что строка может содержать числа в экспоненциальной нотации и/или использовать плавающую точку.
+                                                                                                                 //Он позволяет строке содержать символы +, -, E, e, . (точка), а также цифры.
+                                                                                                                 // Параметр CultureInfo.InvariantCulture указывает, что при преобразовании строки в число нужно использовать инвариантную культуру.Инвариантная культура основана на английском языке и используется для стандартного форматирования чисел и дат.
+                  //  CultureInfo.InvariantCulture гарантирует, что при анализе строки используется стандартное форматирование чисел, независимо от региональных настроек компьютера.
                 }
                 catch (FormatException)
                 {
@@ -2221,67 +2257,6 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-        //private void UpdateTrade(BitfinexTradeUpdate tradeUpdate)
-        //{
-        //    try
-        //    {
-        //        // Проверка и конвертация поля Price
-        //        decimal price;
-        //        if (!decimal.TryParse(tradeUpdate.Price.ToString(), out price))
-        //        {
-        //            throw new FormatException($"Неверный формат цены: {tradeUpdate.Price}");
-        //        }
-
-        //        // Проверка и конвертация поля Amount
-        //        decimal amount;
-        //        if (!decimal.TryParse(tradeUpdate.Amount.ToString(), out amount))
-        //        {
-        //            throw new FormatException($"Неверный формат количества: {tradeUpdate.Amount}");
-        //        }
-
-        //        // Проверка и конвертация поля Timestamp
-        //        long timestamp;
-        //        if (!long.TryParse(tradeUpdate.Timestamp.ToString(), out timestamp))
-        //        {
-        //            throw new FormatException($"Неверный формат метки времени: {tradeUpdate.Timestamp}");
-        //        }
-
-        //        Trade newTrade = new Trade
-        //        {
-        //            SecurityNameCode = _currentSymbol,
-        //            Price = price,
-        //            Id = tradeUpdate.Id,
-        //            Time = TimeManager.GetDateTimeFromTimeStamp(timestamp),
-        //            Volume = Math.Abs(amount),
-        //            Side = amount > 0 ? Side.Buy : Side.Sell
-        //        };
-
-        //        ServerTime = newTrade.Time;
-        //        NewTradesEvent?.Invoke(newTrade);
-        //    }
-        //    catch (FormatException ex)
-        //    {
-        //        // Логирование ошибки при конвертации
-        //        SendLogMessage($"Ошибка формата при обновлении трейда: {ex.Message}", LogMessageType.Error);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Логирование всех других ошибок
-        //        SendLogMessage($"Ошибка при обновлении трейда: {ex.Message}", LogMessageType.Error);
-        //    }
-        //    //    Trade newTrade = new Trade
-        //    //    {
-        //    //        SecurityNameCode = _currentSymbol,
-        //    //        Price = Convert.ToDecimal(tradeUpdate.Price),
-        //    //        Id = tradeUpdate.Id,
-        //    //        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.Timestamp)),
-        //    //        Volume = Math.Abs(Convert.ToDecimal(tradeUpdate.Amount)),
-        //    //        Side = Math.Abs(Convert.ToDecimal(tradeUpdate.Amount)) > 0 ? Side.Buy : Side.Sell
-        //    //    };
-
-        //    //    ServerTime = newTrade.Time;
-        //    //    NewTradesEvent?.Invoke(newTrade);
-        //}
 
 
         private void PrivateMessageReader()
