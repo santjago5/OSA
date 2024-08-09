@@ -30,6 +30,10 @@ using System.Text.Json;
 using System.Globalization;
 using Timer = System.Timers.Timer;
 using System.Linq;
+using OsEngine.Market.Servers.Transaq.TransaqEntity;
+using System.Diagnostics;
+using static Grpc.Core.Metadata;
+using Newtonsoft.Json.Linq;
 
 
 
@@ -849,11 +853,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
 
-                _pingTimer = new Timer(15000); // 15 seconds
-                _pingTimer.Elapsed += SendPing;
-                _pingTimer.AutoReset = true;
-
-
 
                 //_subscriptionsPublic.Clear();
                 //_subscriptionsPrivate.Clear();
@@ -893,6 +892,13 @@ namespace OsEngine.Market.Servers.Bitfinex
                 _webSocketPrivate.Error += WebSocketPrivate_Error;
 
                 _webSocketPrivate.Open();
+
+
+                //_pingTimer = new Timer(25000); // 25 seconds
+                //_pingTimer.Elapsed += SendPing;
+                //_pingTimer.AutoReset = true;
+
+
 
             }
             catch (Exception exception)
@@ -976,34 +982,25 @@ namespace OsEngine.Market.Servers.Bitfinex
         private static WebSocket websocket;
 
 
-        private void SendPing(object sender, ElapsedEventArgs e)
-        {
-            var pingMessage = new
-            {
-                @event = "ping",
-                cid = 1234
-            };
 
-            string jsonPing = JsonConvert.SerializeObject(pingMessage);
-            _webSocketPublic.Send(jsonPing);
-
-        }
         private void WebSocketPublic_Opened(object sender, EventArgs e)
         {
-            _pingTimer.Start();////////////////////////
+
 
             _socketPublicIsActive = true;//отвечает за соединение
 
             CheckActivationSockets();
+            //  _pingTimer.Start();////////////////////////
             SendLogMessage("Connection to public data is Open", LogMessageType.System);
 
         }
+
 
         private void WebSocketPublic_Closed(object sender, EventArgs e)
         {
             try
             {
-                _pingTimer.Stop();
+                // _pingTimer.Stop();
 
                 if (ServerStatus != ServerConnectStatus.Disconnect)
                 {
@@ -1112,7 +1109,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         // Снимок(snapshot) : Структура данных содержит массив массивов, где каждый внутренний массив представляет собой запись в стакане(book entry).
         //Обновление(update) : Структура данных содержит только один массив, представляющий одну запись в стакане(book entry).
 
-        public void ProcessOrderBookResponse(string jsonResponse, string symbol)
+        public void ProcessOrderBookResponse(string jsonResponse, int chanelId) //string symbol)
         {
             // Десериализация JSON-ответа в JsonElement
             var jsonDocument = JsonDocument.Parse(jsonResponse);
@@ -1138,7 +1135,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
             // Проверка, является ли это снимком или обновлением
-            if (secondElement.ValueKind == JsonValueKind.Array && secondElement[0].ValueKind == JsonValueKind.Array)
+            if ((secondElement.ValueKind == JsonValueKind.Array && secondElement[0].ValueKind == JsonValueKind.Array) && (chanelId == channelId))
             {
                 // Это снимок (snapshot)
                 var bookEntries = new List<BitfinexBookEntry>();
@@ -1304,16 +1301,26 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 var bid = depthBids[i];
 
-                bool isPriceValidBid = decimal.TryParse(bid.Price, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal bidPrice);
-                bool isAmountValidBid = decimal.TryParse(bid.Amount, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal bidAmount);
-
-                if (isPriceValidBid && isAmountValidBid)
+                try
                 {
+                    decimal bidPrice = Convert.ToDecimal(bid.Price, CultureInfo.InvariantCulture);
+                    decimal bidAmount = Convert.ToDecimal(bid.Amount, CultureInfo.InvariantCulture);
+
                     newMarketDepth.Bids.Add(new MarketDepthLevel
                     {
                         Price = bidPrice,
                         Bid = bidAmount
                     });
+                }
+                catch (FormatException)
+                {
+                    // Логирование или обработка ошибки при неверном формате
+                    Console.WriteLine($"Invalid bid format: Price={bid.Price}, Amount={bid.Amount}");
+                }
+                catch (Exception ex)
+                {
+                    // Логирование или обработка других исключений
+                    Console.WriteLine($"Unexpected error: {ex.Message}");
                 }
             }
 
@@ -1321,18 +1328,28 @@ namespace OsEngine.Market.Servers.Bitfinex
             for (int i = 0; i < depthAsks.Count; i++)
             {
                 var ask = depthAsks[i];
-
-                bool isPriceValidAsk = decimal.TryParse(ask.Price, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal askPrice);
-                bool isAmountValidAsk = decimal.TryParse(ask.Amount, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal askAmount);
-
-                if (isPriceValidAsk && isAmountValidAsk)
+                try
                 {
+                    decimal askPrice = Convert.ToDecimal(ask.Price, CultureInfo.InvariantCulture);
+                    decimal askAmount = Convert.ToDecimal(ask.Amount, CultureInfo.InvariantCulture);
+
                     newMarketDepth.Asks.Add(new MarketDepthLevel
                     {
                         Price = askPrice,
                         Ask = Math.Abs(askAmount)
                     });
                 }
+                catch (FormatException)
+                {
+                    // Логирование или обработка ошибки при неверном формате
+                    Console.WriteLine($"Invalid ask format: Price={ask.Price}, Amount={ask.Amount}");
+                }
+                catch (Exception ex)
+                {
+                    // Логирование или обработка других исключений
+                    Console.WriteLine($"Unexpected error: {ex.Message}");
+                }
+
             }
 
             // Вызов события обновления стакана
@@ -1349,15 +1366,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             CheckActivationSockets();
             SendLogMessage("Connection to private data is Open", LogMessageType.System);
 
-            ////////////////
-            //var pingMessage = new
-            //{
-            //    @event = "ping",
-            //    cid = 1234
-            //};
-            //string jsonMessage = Newtonsoft.Json.JsonConvert.SerializeObject(pingMessage);
-            //_webSocketPrivate.Send(jsonMessage);
-            ////////////////
         }
 
         private void GenerateAuthenticate()
@@ -1491,72 +1499,23 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
-
-
-        //private void ProcessTradeMessage(string message)
+        //private void SendPing(object sender, EventArgs e)// ElapsedEventArgs e)
         //{
-        //    //var jsonDoc = JsonConvert.DeserializeObject<dynamic>(message);
-        //    dynamic jsonDoc = JsonConvert.DeserializeObject(message);
-
-        //    if (jsonDoc["event"] != null)
+        //    // Проверяем, инициализирован ли _webSocketPublic и открыт ли он
+        //    if (_webSocketPublic != null && _webSocketPublic.State == WebSocketState.Open)
         //    {
-        //        // Handle event messages
-        //        string eventType = jsonDoc["event"];
-        //        switch (eventType)
-        //        {
-        //            case "auth":
-        //                if (jsonDoc["status"] != null && jsonDoc["status"] == "OK")
-        //                {
-        //                    Console.WriteLine("Authenticated successfully");
-        //                }
-        //                else
-        //                {
-        //                    Console.WriteLine("Authentication failed");
-        //                }
-        //                break;
-        //            default:
-        //                Console.WriteLine($"Unknown event type: {eventType}");
-        //                break;
-        //        }
+        //        string Ping = "{\"event\":\"ping\",\"cid\":1234}";
+
+        //        _webSocketPublic.Send(Ping);
         //    }
-        //    else if (jsonDoc is Newtonsoft.Json.Linq.JArray)
+        //    else
         //    {
-        //        // Handle data messages
-        //        int channelId = jsonDoc[0];
-        //        string msgType = jsonDoc[1];
-
-        //        if (channelId == 0)
-        //        {
-        //            // Wallet messages
-        //            switch (msgType)
-        //            {
-        //                case "ws":
-
-        //                    HandleWalletSnapshot(jsonDoc[2]);
-        //                    break;
-        //                case "wu":
-
-        //                    HandleWalletUpdate(jsonDoc[2]);
-        //                    break;
-
-        //            }
-        //        }
+        //        Console.WriteLine("WebSocket is not open. Ping not sent.");
         //    }
+
+
         //}
 
-        //private void HandleWalletSnapshot(dynamic walletSnapshot)
-        //{
-        //    for (int i = 0; i < walletSnapshot.Count; i++)
-        //    {
-        //        var wallet = walletSnapshot[i];
-
-        //    }
-        //}
-
-        //private void HandleWalletUpdate(dynamic walletUpdate)
-        //{
-
-        //}
 
 
 
@@ -1636,7 +1595,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"book\",\"symbol\":\"{security.Name}\",\"prec\":\"P0\",\"freq\":\"F0\",\"len\":\"25\"}}");//стакан
 
-                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"{security.Name}\"}}"); ;//трейды
+                _webSocketPublic.Send($"{{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"{security.Name}\"}}"); //трейды
+
 
             }
             catch (Exception exception)
@@ -1758,19 +1718,22 @@ namespace OsEngine.Market.Servers.Bitfinex
                             SendLogMessage("Неверный формат Channel ID", LogMessageType.Error);
                             return;
                         }
-                        // if (root[0].ValueKind == JsonValueKind.Array)
+                        int chanelId = root[0].GetInt32();
+
+
 
                         // if(root[0].ValueKind == JsonValueKind.Array && root[1].ValueKind == JsonValueKind.Array)
                         if (root[0].ValueKind == JsonValueKind.Number && root[1].ValueKind == JsonValueKind.Array)
                         {
 
 
-                            ProcessOrderBookResponse(message, _currentSymbol);
+                            //ProcessOrderBookResponse(message, _currentSymbol);
+                            ProcessOrderBookResponse(message, chanelId);
                         }
 
 
                         // Извлечение Channel ID
-                        int channelId = root[0].GetInt32();
+
 
                         // Извлечение основного содержимого
 
@@ -2059,12 +2022,88 @@ namespace OsEngine.Market.Servers.Bitfinex
                         continue;
                     }
 
-                    if (message.Equals("pong"))
+                    if (message.Contains("pong"))
                     {
                         continue;
                     }
 
+                    if (message.Contains("auth"))
+                    {
+                        return;
+                    }
+                    if (message.Contains("info"))
+                    {
+                        return;
+                    }
 
+                    var jsonDocument = JsonDocument.Parse(message);
+                    var root = jsonDocument.RootElement;
+                    var eventType = root.GetProperty("event").GetString();
+
+                    //if (root.ValueKind == JsonValueKind.Object)
+
+                    //{
+                    //  'os'(снимок заказа), 'on'(новый заказ), 'ou'(обновление заказа) и 'oc'(отмена заказа).
+
+                    //if (eventType == "os" || eventType == "on" || eventType == "ou" || eventType == "oc")
+                    //{
+                    //    UpdateOrder(message);
+                    //    continue;
+                    //}
+                    // }
+
+                    //if (message.Contains(""))
+                    //{
+                    //    UpdatePortfolio(message);
+                    //    continue;
+                    //}
+
+                    //jsonDocument = JsonDocument.Parse(message);
+                    //root = jsonDocument.RootElement;
+                    //var json = JToken.Parse(message);
+
+                    //if (json[1].Value<string>() == "on" || json[1].Value<string>() == "ou")
+                    //{
+                    //    // Это сообщение о новом ордере или об обновлении ордера
+                    //    Console.WriteLine("Order update received: " + json);
+                    //}
+                    // Проверка, что это массив и имеет хотя бы 2 элемента
+                    if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 1)
+                    {
+                        // Извлечение второго элемента массива (тип события)
+                        // string eventType = root[1].GetString();
+
+                        // Проверка на тип события "on" или "ou"
+                        if (eventType == "on" || eventType == "ou")
+                        {
+
+                            UpdateOrder(message);
+                            continue;
+
+                        }
+                    }
+                    if (root[0].ValueKind == JsonValueKind.Array) //&& root[0].ValueKind = JsonValueKind.Number)
+                    {
+                        int chanelId = root[0].GetInt32();
+
+                        if (root.ValueKind == JsonValueKind.Object)
+                        {
+                            // var eventType = root.GetProperty("event").GetString();
+
+
+                            if ((eventType == "tu" || eventType == "te") && (chanelId == 0))
+                            {
+                                UpdateMyTrade(message);
+                                continue;
+                            }
+                        }
+                    }
+
+
+                    //if (message.Contains(""))
+                    //{
+
+                    //}
 
                 }
                 catch (Exception exception)
@@ -2080,137 +2119,135 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-        //private void UpdateMyTrade(string message)
-        //{
-        //    //var response = JsonConvert.DeserializeObject<BitfinexResponseWebSocketMessage<BitfinexMyTrade>>(message);
+        private void UpdateMyTrade(string message)
+        {
+            var response = JsonConvert.DeserializeObject<BitfinexMyTrade>(message);
 
 
 
-        //    var item = response.data;
-        //    var time = Convert.ToInt64(item.time);
+            var item = response;
+            var time = Convert.ToInt64(item.Time);
 
-        //    var newTrade = new MyTrade
-        //    {
-        //        Time = TimeManager.GetDateTimeFromTimeStamp(time),
-        //        SecurityNameCode = item.symbol,
-        //        NumberOrderParent = item.orderId,
-        //        Price = Convert.ToDecimal(item.execPrice),
-        //        NumberTrade = item.id,
-        //        NumberPosition = item.orderId,//////////
-        //        Side = item.execAmount.Contains("-") ? Side.Sell : Side.Buy,
-        //        Volume = Convert.ToDecimal(item.execAmount)
-        //    };
+            var newTrade = new MyTrade
+            {
+                Time = TimeManager.GetDateTimeFromTimeStamp(time),
+                SecurityNameCode = item.Symbol,
+                NumberOrderParent = item.OrderId,
+                Price = Convert.ToDecimal(item.OrderPrice),
+                NumberTrade = item.TradeId,
+                NumberPosition = item.OrderId,//////////
+                Side = item.Amount.Contains("-") ? Side.Sell : Side.Buy,
+                Volume = Convert.ToDecimal(item.Amount)
+            };
 
-        //    MyTradeEvent?.Invoke(newTrade);
-        //}
-        //private void UpdateOrder(string message)
-        //{
-        //    var response = JsonConvert.DeserializeObject<BitfinexResponseWebSocketMessage<BitfinexOrder>>(message);
+            MyTradeEvent?.Invoke(newTrade);
+        }
+        private void UpdateOrder(string message)
+        {
+            var response = JsonConvert.DeserializeObject<BitfinexOrder>(message);
 
-        //    if (response?.data == null)
-        //    {
-        //        return;
-        //    }
+            if (response == null)
+            {
+                return;
+            }
 
-        //    var item = response.data;
-        //    var stateType = response.status;
 
-        //    if (item.type.Equals("EXCHANGE MARKET")/* &&  item.status == OrderStateType.Activ*/)
-        //    {
-        //        return;
-        //    }
+            if (response.Equals("EXCHANGE MARKET")) /*&& (response.Status == OrderStateType.Activ)*/
+            {
+                return;
+            }
 
-        //    var newOrder = new Order
-        //    {
-        //        SecurityNameCode = item.symbol,
-        //        TimeCallBack = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(item.time)),
-        //        NumberUser = Convert.ToInt32(item.cid),
-        //        NumberMarket = item.id,
-        //        Side = item.amount.Equals("-") ? Side.Sell : Side.Buy,
-        //        //State =item.status,
-        //        //State = (OrderStateType)Enum.Parse(typeof(OrderStateType), item.status),
-        //        TypeOrder = item.type.Equals("EXCHANGE MARKET") ? OrderPriceType.Market : OrderPriceType.Limit,
-        //        Volume = item.status.Equals("OPEN") ? Convert.ToDecimal(item.amount) : Convert.ToDecimal(item.amountOrig),
-        //        Price = Convert.ToDecimal(item.price),
-        //        ServerType = ServerType.Bitfinex,
-        //        PortfolioNumber = "Bitfinex"
-        //    };
+            var newOrder = new Order
+            {
+                SecurityNameCode = response.Symbol,
+                TimeCallBack = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(response.MtsCreate)),
+                NumberUser = Convert.ToInt32(response.Cid),
+                NumberMarket = response.Id,
+                Side = response.Amount.Equals("-") ? Side.Sell : Side.Buy,
+                //State =item.status,
+                //State = (OrderStateType)Enum.Parse(typeof(OrderStateType), item.status),
+                TypeOrder = response.Equals("EXCHANGE MARKET") ? OrderPriceType.Market : OrderPriceType.Limit,
+                Volume = response.Status.Equals("OPEN") ? Convert.ToDecimal(response.Amount) : Convert.ToDecimal(response.AmountOrig),
+                Price = Convert.ToDecimal(response.Price),
+                ServerType = ServerType.Bitfinex,
+                PortfolioNumber = "Bitfinex"
+            };
 
-        //    MyOrderEvent?.Invoke(newOrder);
-        //}
+            MyOrderEvent?.Invoke(newOrder);
+        }
 
 
         //ACTIVE - На исполнении
-        //EXECUTED - Исполнена
-        //CANCELED - Отменена
+        //        EXECUTED - Исполнена
+        //        CANCELED - Отменена
 
 
-        //    if (baseMessage.status == "ACTIVE")
-        //    {
-        //        order.State = OrderStateType.Activ;
-        //    }
-        //    else if (baseMessage.status == "EXECUTED")
-        //    {
-        //        order.State = OrderStateType.Done;
-        //    }
-        //    else if (baseMessage.status == "PARTIALLY FILLED")
-        //    {
-        //        order.State = OrderStateType.Patrial;
-        //    }
+        //                    if (baseMessage.status == "ACTIVE")
+        //                    {
+        //                        order.State = OrderStateType.Activ;
+        //                    }
+        //                    else if (baseMessage.status == "EXECUTED")
+        //                    {
+        //                        order.State = OrderStateType.Done;
+        //                    }
+        //                    else if (baseMessage.status == "PARTIALLY FILLED")
+        //{
+        //    order.State = OrderStateType.Patrial;
+        //}
 
-        //    else if (baseMessage.status == "CANCELED")
+        //else if (baseMessage.status == "CANCELED")
+        //{
+        //    lock (_changePriceOrdersArrayLocker)
         //    {
-        //        lock (_changePriceOrdersArrayLocker)
+        //        DateTime now = DateTime.Now;
+        //        for (int i = 0; i < _changePriceOrders.Count; i++)
         //        {
-        //            DateTime now = DateTime.Now;
-        //            for (int i = 0; i < _changePriceOrders.Count; i++)
+        //            if (_changePriceOrders[i].TimeChangePriceOrder.AddSeconds(2) < now)
         //            {
-        //                if (_changePriceOrders[i].TimeChangePriceOrder.AddSeconds(2) < now)
-        //                {
-        //                    _changePriceOrders.RemoveAt(i);
-        //                    i--;
-        //                    continue;
-        //                }
-
-        //                //if (_changePriceOrders[i].MarketId == order.NumberMarket)
-        //                //{
-        //                //    return null;
-        //                //}
+        //                _changePriceOrders.RemoveAt(i);
+        //                i--;
+        //                continue;
         //            }
-        //        }
 
-        //        if (string.IsNullOrEmpty(baseMessage.amount))
-        //        {
-        //            order.State = OrderStateType.Cancel;
+        //            //if (_changePriceOrders[i].MarketId == order.NumberMarket)
+        //            //{
+        //            //    return null;
+        //            //}
         //        }
-        //        else if (baseMessage.amount == "0")
+        //    }
+
+        //    if (string.IsNullOrEmpty(baseMessage.amount))
+        //    {
+        //        order.State = OrderStateType.Cancel;
+        //    }
+        //    else if (baseMessage.amount == "0")
+        //    {
+        //        order.State = OrderStateType.Cancel;
+        //    }
+        //    else
+        //    {
+        //        try
         //        {
-        //            order.State = OrderStateType.Cancel;
-        //        }
-        //        else
-        //        {
-        //            try
+        //            decimal volFilled = baseMessage.amount.ToDecimal();
+
+        //            if (volFilled > 0)
         //            {
-        //                decimal volFilled = baseMessage.amount.ToDecimal();
-
-        //                if (volFilled > 0)
-        //                {
-        //                    order.State = OrderStateType.Done;
-        //                }
-        //                else
-        //                {
-        //                    order.State = OrderStateType.Cancel;
-        //                }
+        //                order.State = OrderStateType.Done;
         //            }
-        //            catch
+        //            else
         //            {
         //                order.State = OrderStateType.Cancel;
         //            }
         //        }
+        //        catch
+        //        {
+        //            order.State = OrderStateType.Cancel;
+        //        }
         //    }
-
-        //    return order;
         //}
+
+        //return order;
+        //                }
 
 
 
@@ -2230,23 +2267,24 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private string subscriptionResponse;
 
-        //  private RateGate _rateGateSubscrible = new RateGate(1, TimeSpan.FromMilliseconds(50));
 
-        public void SendOrder(Order order)//Submit
+
+        public void SendOrder(Order order)
         {
             _rateGateSendOrder.WaitToProceed();
 
+            BitfinexOrder data = new BitfinexOrder
+            {
+                Cid = order.NumberUser.ToString(),
+                Symbol = order.SecurityNameCode,
+                Amount = order.Volume.ToString().Replace(",", "."),
+                TypePrev = order.TypeOrder.ToString().ToUpper(),
+                Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", "."),
+                MtsCreate = order.TimeCreate.ToString(),
+                Status = order.State.ToString()
+            };
 
-            BitfinexOrder data = new BitfinexOrder();
 
-            data.Cid = order.NumberUser.ToString();
-            data.Symbol = order.SecurityNameCode;
-            data.Amount = order.Side.ToString();
-            data.TypePrev = order.TypeOrder.ToString().ToUpper();//надо с большой буквы или нет
-            data.Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", ".");
-            data.Amount = order.Volume.ToString().Replace(",", ".");
-            data.MtsCreate = order.TimeCreate.ToString();
-            data.Status = order.State.ToString();
 
             string apiPath = "/auth/w/order/submit";
             string signature = $"{_postUrl}{apiPath}{nonce}";
@@ -2258,13 +2296,18 @@ namespace OsEngine.Market.Servers.Bitfinex
             request.AddHeader("bfx-nonce", nonce);
             request.AddHeader("bfx-apikey", _publicKey);
             request.AddHeader("bfx-signature", sig);
-            request.AddJsonBody($"{{\"type\":\"{order.TypeOrder}\",\"symbol\":\"{order.SecurityNameCode}\",\"amount\":\"{order.Volume}\",\"price\":\"{order.Price}\"}}");
+            request.AddJsonBody(new
+            {
+                type = order.TypeOrder.ToString().ToUpper(),
+                symbol = order.SecurityNameCode,
+                amount = order.Volume.ToString().Replace(",", "."),
+                price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", ".")
+            });
+
             IRestResponse response = client.Execute(request);
 
             try
-
             {
-
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     var jsonResponse = response.Content;
@@ -2275,28 +2318,12 @@ namespace OsEngine.Market.Servers.Bitfinex
                     order.State = OrderStateType.Activ;
                     order.NumberMarket = stateResponse.Cid;
 
-                    SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-
-                    order.State = OrderStateType.Activ;
-
                     MyOrderEvent?.Invoke(order);
-
                 }
-
                 else
                 {
                     CreateOrderFail(order);
-                    //order.State = OrderStateType.Fail;
-
                     SendLogMessage("Order Fail", LogMessageType.Error);
-
-
-                    //if (response.Content != null)
-                    //{
-                    //    SendLogMessage("Fail reasons: "
-                    //  + response.Content, LogMessageType.Error);
-                    //}
-
                 }
             }
             catch (Exception exception)
@@ -2305,6 +2332,92 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
             }
         }
+
+        //public void SendOrder(Order order)//Submit
+        //{
+        //    _rateGateSendOrder.WaitToProceed();
+
+
+        //    BitfinexOrder data = new BitfinexOrder();
+
+        //    data.Cid = order.NumberUser.ToString();
+        //    data.Symbol = order.SecurityNameCode;
+
+        //    data.Amount = (order.Side == Side.Buy ? "" : "-").ToString().ToLower();
+        //    data.TypePrev = order.TypeOrder.ToString().ToUpper();//надо с большой буквы или нет
+        //    data.Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", ".");
+
+        //    // data.Amount = order.Volume.ToString().Replace(",", ".");
+        //    data.Amount = order.Volume.ToString().Replace(",", ".");
+        //    data.MtsCreate = order.TimeCreate.ToString();
+        //    data.Status = order.State.ToString();
+
+
+
+        //    JsonSerializerSettings dataSerializerSettings = new JsonSerializerSettings();
+        //    dataSerializerSettings.NullValueHandling = NullValueHandling.Ignore;// если маркет-ордер, то игнорим параметр цены
+
+        //    string jsonRequest = JsonConvert.SerializeObject(data, dataSerializerSettings);
+
+        //     //https://api.bitfinex.com/v2/auth/w/order/submit
+
+        //    string apiPath = "/auth/w/order/submit";
+        //    string signature = $"{_postUrl}{apiPath}{nonce}";
+        //    string sig = ComputeHmacSha384(_secretKey, signature);
+
+        //    RestClient client = new RestClient(_postUrl);
+        //    RestRequest request = new RestRequest(apiPath, Method.POST);
+        //    request.AddHeader("accept", "application/json");
+        //    request.AddHeader("bfx-nonce", nonce);
+        //    request.AddHeader("bfx-apikey", _publicKey);
+        //    request.AddHeader("bfx-signature", sig);
+        //    //request.AddJsonBody($"{{\"type\":\"{order.TypeOrder}\",\"symbol\":\"{order.SecurityNameCode}\",\"amount\":\"{order.Volume}\",\"price\":\"{order.Price}\"}}");
+        //    request.AddJsonBody($"{{\"type\":\"{data.TypePrev}\",\"symbol\":\"{data.Symbol}\",\"amount\":\"{data.Amount}\",\"price\":\"{data.Price}\"}}");
+
+        //    IRestResponse response = client.Execute(request);
+
+        //    try
+        //    {
+        //        if (response.StatusCode == HttpStatusCode.OK)
+        //        {
+        //            var jsonResponse = response.Content;
+        //            BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
+
+        //            SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
+
+        //            order.State = OrderStateType.Activ;
+        //            order.NumberMarket = stateResponse.Cid;
+
+        //            SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
+
+
+        //            MyOrderEvent?.Invoke(order);
+        //        }
+
+        //        else
+        //        {
+        //            CreateOrderFail(order);
+        //            //order.State = OrderStateType.Fail;
+
+        //            SendLogMessage("Order Fail", LogMessageType.Error);
+
+
+        //            //if (response.Content != null)
+        //            //{
+        //            //    SendLogMessage("Fail reasons: "
+        //            //  + response.Content, LogMessageType.Error);
+        //            //}
+
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        CreateOrderFail(order);
+        //        SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
+        //    }
+
+        //    MyOrderEvent.Invoke(order);
+        //}
 
 
 
@@ -2661,110 +2774,4 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-
-//public void UpdateDepth(string message)
-//{
-
-//     //var responseDepth = JsonConvert.DeserializeObject<BitfinexResponseWebSocketMessage<List<BitfinexMarketDepth>>>(message);
-//     var responseDepth = JsonConvert.DeserializeObject<BitfinexResponceWebSocketDepth>(message);
-
-
-//    if (responseDepth == null)
-//    {
-//        return;
-//    }
-//    if (string.IsNullOrEmpty(message))
-//    {
-//        return;
-//    }
-
-
-//    MarketDepth marketDepth = new MarketDepth
-//    {
-
-//        Time = DateTime.UtcNow,
-//        Asks = new List<MarketDepthLevel>(),
-//        Bids = new List<MarketDepthLevel>()
-//    };
-//    marketDepth.SecurityNameCode = responseDepth.Symbol;
-//    //marketDepth.SecurityNameCode = "tBTCUSD";
-
-//    string precision = "P0";
-//    var client = new RestClient($"{_getUrl}/book/{responseDepth.Symbol}/{precision}");
-//   // var client = new RestClient($"{_getUrl}/book/{"tBTCUSD"}/{precision}");
-//    var request = new RestRequest("", Method.GET);
-//    request.AddHeader("accept", "application/json");
-//    var response = client.Execute(request);
-
-//    if (response.StatusCode == HttpStatusCode.OK)
-//    {
-//        string jsonResponse = response.Content;
-//        var marketDepthList = JsonConvert.DeserializeObject<List<List<decimal>>>(jsonResponse);
-
-//        if (marketDepthList == null || marketDepthList.Count == 0)
-//        {
-//            return;
-//        }
-
-//        List<BitfinexMarketDepth> marketDepths = new List<BitfinexMarketDepth>();
-
-//        for (int i = 0; i < marketDepthList.Count; i++)
-//        {
-//            var depthItem = marketDepthList[i];
-
-//            if (depthItem.Count < 3)
-//            {
-//                continue;
-//            }
-
-//            BitfinexMarketDepth newMarketDepth = new BitfinexMarketDepth
-//            {
-//                Price = depthItem[0].ToString(),
-//                Count = depthItem[1].ToString(),
-//                Amount = depthItem[2].ToString()
-
-//            };
-
-//            marketDepths.Add(newMarketDepth);
-//        }
-
-
-
-
-//        for (int i = 0; i < marketDepthList.Count; i++)
-//        {
-//            var depthItem = marketDepthList[i];
-
-//        if (depthItem.Count < 3)
-//        {
-//            continue;
-//        }
-
-//        var price = Convert.ToDecimal(depthItem[0]);
-//        var count = Convert.ToDecimal(depthItem[1]);
-//        var amount = Convert.ToDecimal(depthItem[2]);
-
-//        if (amount > 0)
-//        {
-//                marketDepth.Bids.Add(new MarketDepthLevel
-//                {
-//                    Price = price,
-//                    Bid = count
-
-//                }) ; 
-
-//        }
-
-//        else
-//        {
-//            marketDepth.Asks.Add(new MarketDepthLevel
-//            {
-//                Price = price,
-//                Ask = Math.Abs(amount)
-//            });
-//        }
-//    }
-
-// MarketDepthEvent?.Invoke(marketDepth);
-//} 
 
