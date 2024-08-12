@@ -31,6 +31,7 @@ using Timer = System.Timers.Timer;
 using System.Linq;
 using OsEngine.Market.Servers.GateIo.GateIoFutures.Entities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
+using System.Security.Policy;
 
 
 
@@ -190,7 +191,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         private HttpClient _httpClient = new HttpClient();
 
         string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000).ToString(); //берет время сервера без учета локального
-
+       
         #endregion
 
 
@@ -230,8 +231,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     List<BitfinexSecurity> security = new List<BitfinexSecurity>();
 
-                    //for (int i = 0; i < 3; i++)
-                    for (int i = 0; i < securityList.Count; i++)
+                    for (int i = 0; i < 3; i++)
+                    //for (int i = 0; i < securityList.Count; i++)
                     {
                         var item = securityList[i];
 
@@ -2288,17 +2289,21 @@ namespace OsEngine.Market.Servers.Bitfinex
             };
 
             // Сериализуем объект тела в JSON
-            //string bodyJson = Newtonsoft.Json.JsonSerializer.Serialize(body);
-
+          
             string bodyJson = Newtonsoft.Json.JsonConvert.SerializeObject(body);
 
             // Создаем nonce как текущее время в миллисекундах
-            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+           string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
             // Создаем строку для подписи
             string signature = $"/api/{apiPath}{nonce}{bodyJson}";
 
             // Вычисляем подпись с использованием HMACSHA384
+
+
+            //string sig = ComputeHmacSha384(_secretKey, signature);
+
+
             string sig;
             using (var hmac = new HMACSHA384(Encoding.UTF8.GetBytes(_secretKey)))
             {
