@@ -392,7 +392,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             try
             {
-
+                //string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString(); //берет время сервера без учета локального//добавила
                 string apiPath = "v2/auth/r/wallets";
                
                 string signature = $"/api/{apiPath}{nonce}";
@@ -1366,11 +1366,19 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void GenerateAuthenticate()
         {
-
+            //string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
             string payload = $"AUTH{nonce}";
             string signature = ComputeHmacSha384(payload, _secretKey);
 
+
+            //string sig;
+            //using (var hmac = new HMACSHA384(Encoding.UTF8.GetBytes(_secretKey)))
+            //{
+            //    byte[] output = hmac.ComputeHash(Encoding.UTF8.GetBytes(signature));
+            //    sig = BitConverter.ToString(output).Replace("-", "").ToLower();
+            //}
+           
             //string signature;
 
             //using (var hmac = new HMACSHA384(Encoding.UTF8.GetBytes(_apiSecret)))
@@ -2277,93 +2285,93 @@ namespace OsEngine.Market.Servers.Bitfinex
             };
 
 
-            string apiPath = "v2/auth/w/order/submit";
+           //// string apiPath = "v2/auth/w/order/submit";
 
-            // Создаем объект тела запроса
-            var body = new
-            {
-                type = "EXCHANGE LIMIT",
-                symbol = "tTRXUSD",
-                price = "0.1279",
-                amount = "22"
-            };
+           //// // Создаем объект тела запроса
+           //// var body = new
+           //// {
+           ////     type = "EXCHANGE LIMIT",
+           ////     symbol = "tTRXUSD",
+           ////     price = "0.1279",
+           ////     amount = "22"
+           //// };
 
-            // Сериализуем объект тела в JSON
+           //// // Сериализуем объект тела в JSON
           
-            string bodyJson = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+           //// string bodyJson = Newtonsoft.Json.JsonConvert.SerializeObject(body);
 
-            // Создаем nonce как текущее время в миллисекундах
-           string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+           //// // Создаем nonce как текущее время в миллисекундах
+           ////string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
-            // Создаем строку для подписи
-            string signature = $"/api/{apiPath}{nonce}{bodyJson}";
+           //// // Создаем строку для подписи
+           //// string signature = $"/api/{apiPath}{nonce}{bodyJson}";
 
-            // Вычисляем подпись с использованием HMACSHA384
-
-
-            //string sig = ComputeHmacSha384(_secretKey, signature);
+           //// // Вычисляем подпись с использованием HMACSHA384
 
 
-            string sig;
-            using (var hmac = new HMACSHA384(Encoding.UTF8.GetBytes(_secretKey)))
-            {
-                byte[] output = hmac.ComputeHash(Encoding.UTF8.GetBytes(signature));
-                sig = BitConverter.ToString(output).Replace("-", "").ToLower();
-            }
-            string baseUrl = "https://api.bitfinex.com";
-
-            // Создаем клиента RestSharp
-            var client = new RestClient(baseUrl);
-
-            // Создаем запрос типа POST
-            var request = new RestRequest(apiPath, Method.POST);
-
-            // Добавляем заголовки
-            request.AddHeader("accept", "application/json");
-            request.AddHeader("bfx-nonce", nonce);
-            request.AddHeader("bfx-apikey", _publicKey);
-            request.AddHeader("bfx-signature", sig);
-
-            // Добавляем тело запроса в формате JSON
-            request.AddJsonBody(body); //
+           //// //string sig = ComputeHmacSha384(_secretKey, signature);
 
 
-            try
-            {
-                // Отправляем запрос и получаем ответ
-                var response = client.Execute(request);
+           //// string sig;
+           //// using (var hmac = new HMACSHA384(Encoding.UTF8.GetBytes(_secretKey)))
+           //// {
+           ////     byte[] output = hmac.ComputeHash(Encoding.UTF8.GetBytes(signature));
+           ////     sig = BitConverter.ToString(output).Replace("-", "").ToLower();
+           //// }
+           //// string baseUrl = "https://api.bitfinex.com";
 
-                // Выводим тело ответа
-                string responseBody = response.Content;
+           //// // Создаем клиента RestSharp
+           //// var client = new RestClient(baseUrl);
 
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    var jsonResponse = response.Content;
-                    BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
+           //// // Создаем запрос типа POST
+           //// var request = new RestRequest(apiPath, Method.POST);
 
-                    SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
+           //// // Добавляем заголовки
+           //// request.AddHeader("accept", "application/json");
+           //// request.AddHeader("bfx-nonce", nonce);
+           //// request.AddHeader("bfx-apikey", _publicKey);
+           //// request.AddHeader("bfx-signature", sig);
 
-                    order.State = OrderStateType.Activ;
-                    order.NumberMarket = stateResponse.Cid;
+           //// // Добавляем тело запроса в формате JSON
+           //// request.AddJsonBody(body); //
 
 
-                    MyOrderEvent?.Invoke(order);
-                }
-                else
-                {
+            ////try
+            ////{
+            ////    // Отправляем запрос и получаем ответ
+            //// //   var response = client.Execute(request);
 
-                    SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
+            ////    // Выводим тело ответа
+            ////    string responseBody = response.Content;
 
-                    //CreateOrderFail(order);
-                    //SendLogMessage("Order Fail", LogMessageType.Error);
-                }
-            }
-            catch (Exception exception)
-            {
-                // Обрабатываем исключения и выводим сообщение
-                CreateOrderFail(order);
-                SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
-            }
+            ////    if (response.StatusCode == HttpStatusCode.OK)
+            ////    {
+            ////        var jsonResponse = response.Content;
+            ////        BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
+
+            ////        SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
+
+            ////        order.State = OrderStateType.Activ;
+            ////        order.NumberMarket = stateResponse.Cid;
+
+
+            ////        MyOrderEvent?.Invoke(order);
+            ////    }
+            ////    else
+            ////    {
+
+            ////        SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
+
+            ////        //CreateOrderFail(order);
+            ////        //SendLogMessage("Order Fail", LogMessageType.Error);
+            ////    }
+            ////}
+            ////catch (Exception exception)
+            ////{
+            ////    // Обрабатываем исключения и выводим сообщение
+            ////    CreateOrderFail(order);
+            ////    SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
+            ////}
 
 
         }
@@ -2528,7 +2536,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
 
             string apiPath = "v2/auth/w/order/cancel/multi";
-            string signature = $"{_postUrl}{apiPath}{nonce}";// {bodyJson}";
+            string signature = $"{_postUrl}/{apiPath}{nonce}";// {bodyJson}";
             string sig = ComputeHmacSha384(_secretKey, signature);
 
             //post https://api.bitfinex.com/v2/auth/w/order/cancel/multi
