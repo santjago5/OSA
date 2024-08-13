@@ -32,6 +32,8 @@ using System.Linq;
 using OsEngine.Market.Servers.GateIo.GateIoFutures.Entities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
 using System.Security.Policy;
+using Kraken.WebSockets;
+using Side = OsEngine.Entity.Side;
 
 
 
@@ -2278,16 +2280,16 @@ namespace OsEngine.Market.Servers.Bitfinex
                 Cid = order.NumberUser.ToString(),
                 Symbol = order.SecurityNameCode,
                 //Amount = order.Volume.ToString().Replace(",", "."),
-                 AmountOrig = order.Volume.ToString().Replace(",", "."),
+                 Amount = order.Volume.ToString().Replace(",", "."),
                 OrderType = order.TypeOrder.ToString().ToUpper(),
                 Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", "."),
                 MtsCreate = order.TimeCreate.ToString(),
                 Status = order.State.ToString(),
+                // AmountOrig =order.Side == "Sell" ? Side.Sell : Side.Buy,
                 // AmountOrig=order.Side.ToString(),
-              //  Amount = order.Side.ToString(),
-                //Amount = Amount > 0 ? Side.Buy : Side.Sell
+                //  Amount = order.Side.ToString(),
 
-            };
+             }; 
            
             
             string apiPath = "v2/auth/w/order/submit";
