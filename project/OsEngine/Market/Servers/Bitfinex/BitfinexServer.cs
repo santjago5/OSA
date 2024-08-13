@@ -2275,6 +2275,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             _rateGateSendOrder.WaitToProceed();
 
+
             BitfinexOrder data = new BitfinexOrder
             {
                 Cid = order.NumberUser.ToString(),
@@ -2285,19 +2286,21 @@ namespace OsEngine.Market.Servers.Bitfinex
                 Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", "."),
                 MtsCreate = order.TimeCreate.ToString(),
                 Status = order.State.ToString(),
-                // AmountOrig =order.Side == "Sell" ? Side.Sell : Side.Buy,
-                // AmountOrig=order.Side.ToString(),
-                //  Amount = order.Side.ToString(),
+                AmountOrig=order.Side.ToString(),
 
-             }; 
-           
-            
+        };    
+            //bool isSellOrder = decimal.Parse(data.Amount) < 0;
+        //      var side = isSellOrder ? "Sell" : "Buy";
+
+
+
+
             string apiPath = "v2/auth/w/order/submit";
 
             // Создаем объект тела запроса
             var body = new
             {
-                type = data.OrderType,
+                type = "EXCHANGE LIMIT",
                 symbol = data.Symbol,
                 price = data.Price,
                 amount = data.Amount
@@ -2366,7 +2369,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 else
                 {
 
-                    SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
+                    SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}: {response.StatusDescription}:{response.ErrorMessage}", LogMessageType.Error);
 
                     //CreateOrderFail(order);
                     //SendLogMessage("Order Fail", LogMessageType.Error);

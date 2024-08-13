@@ -10,11 +10,24 @@ using System.Windows.Controls;
 
 namespace OsEngine.Market.Servers.Bitfinex.Json
 {
-  
-   
+
+
+
+
+    public class BitfinexResponseOrder
+    {
+        public string Mts { get; set; } // Временная метка (MTS)//1678988263842, //MTS
+        public string Type { get; set; } // Тип события (TYPE)/ "ou-req"order cancel request, //TYPE
+        public string MessageId { get; set; } // ID сообщения (MESSAGE_ID)
+        public string Data { get; set; } // DATA массив (десериализуется отдельно)
+        public string Code { get; set; } // Код ответа (CODE)
+        public string Status { get; set; } // Статус (STATUS) (SUCCESS, ERROR, FAILURE, ..., //STATUS
+        public string Text { get; set; } // Текст ответа (TEXT)text Submitting exchange limit buy order for 0.1 BTC."
+    }
+
     public class BitfinexOrder
     {
-        public string Id { get; set; }//1747566428, //ID
+        public string Id { get; set; }//1747566428, //ID// Идентификатор заказа (ID)
         public string Gid { get; set; }//GID Group Order ID
         public string Cid { get; set; }//1678987199446, //CID Client Order ID
         public string Symbol { get; set; }//"tBTCUSD", //SYMBOL
@@ -39,17 +52,14 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
 
 
-    public class Notification
-    {
-        public long Mts { get; set; }//1678988263842, //MTS
-        public string Type { get; set; }// "ou-req"order cancel request, //TYPE
-        public int MessageId { get; set; }
-        public object[] Placeholder { get; set; } // Placeholder for skipped fields
-        public List<BitfinexOrder> Data { get; set; }
-        public int Code { get; set; }
-        public string Status { get; set; }
-        public string Text { get; set; }
-    }
+
+
+
+
+
+
+
+ 
 
     //"Submitting update to exchange limit buy order for 0.1 BTC." //TEXT
 
