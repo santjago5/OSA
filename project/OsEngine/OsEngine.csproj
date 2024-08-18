@@ -570,7 +570,6 @@
     <Compile Include="Market\Servers\BingX\BingXSpot\Entity\ResponseSpotBingX.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfinexServer.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitFinexServerPermission.cs" />
-    <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\BitfinexOrder.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\BitfinexSecurity.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\BitfinexTickerTradeInfo.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\EventInfo.cs" />

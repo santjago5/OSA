@@ -10,10 +10,7 @@ using System.Windows.Controls;
 
 namespace OsEngine.Market.Servers.Bitfinex.Json
 {
-
-
-
-
+   
     public class BitfinexResponseOrder
     {
         public string Mts { get; set; } // Временная метка (MTS)//1678988263842, //MTS
@@ -25,7 +22,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         public string Text { get; set; } // Текст ответа (TEXT)text Submitting exchange limit buy order for 0.1 BTC."
     }
 
-    public class BitfinexOrder
+    public class BitfinexOrderData
     {
         public string Id { get; set; }//1747566428, //ID// Идентификатор заказа (ID)
         public string Gid { get; set; }//GID Group Order ID
@@ -71,111 +68,111 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
 }
 
-public enum BitfinexOrderType
-{
-    LIMIT,              // Лимитный ордер
-    EXCHANGE_LIMIT,     // Лимитный ордер на бирже
-    MARKET,             // Рыночный ордер
-    EXCHANGE_MARKET,    // Рыночный ордер на бирже
-    STOP,               // Стоп-ордер
-    EXCHANGE_STOP,      // Стоп-ордер на бирже
-    STOP_LIMIT,         // Стоп-лимитный ордер
-    EXCHANGE_STOP_LIMIT,// Стоп-лимитный ордер на бирже
-    TRAILING_STOP,      // Трейлинг-стоп ордер
-    EXCHANGE_TRAILING_STOP, // Трейлинг-стоп ордер на бирже
-    FOK,                // Fill or Kill ордер
-    EXCHANGE_FOK,       // Fill or Kill ордер на бирже
-    IOC,                // Immediate or Cancel ордер
-    EXCHANGE_IOC        // Immediate or Cancel ордер на бирже
-}
+//public enum BitfinexOrderType
+//{
+//    LIMIT,              // Лимитный ордер
+//    EXCHANGE_LIMIT,     // Лимитный ордер на бирже
+//    MARKET,             // Рыночный ордер
+//    EXCHANGE_MARKET,    // Рыночный ордер на бирже
+//    STOP,               // Стоп-ордер
+//    EXCHANGE_STOP,      // Стоп-ордер на бирже
+//    STOP_LIMIT,         // Стоп-лимитный ордер
+//    EXCHANGE_STOP_LIMIT,// Стоп-лимитный ордер на бирже
+//    TRAILING_STOP,      // Трейлинг-стоп ордер
+//    EXCHANGE_TRAILING_STOP, // Трейлинг-стоп ордер на бирже
+//    FOK,                // Fill or Kill ордер
+//    EXCHANGE_FOK,       // Fill or Kill ордер на бирже
+//    IOC,                // Immediate or Cancel ордер
+//    EXCHANGE_IOC        // Immediate or Cancel ордер на бирже
+//}
 
-enum orderType
-{
-    limit,
-    exchangeLimit,
-    market,
-    exchangeMarket,
-    stop,
-    exchangeStop,
-    stopLimit,
-    exchangeStopLimit,
-    trailingStop,
-    exchangeTrailingStop,
-    fok,
-    exchangeFok,
-    ioc,
-    exchangeIoc
-}
-
-
+//enum orderType
+//{
+//    limit,
+//    exchangeLimit,
+//    market,
+//    exchangeMarket,
+//    stop,
+//    exchangeStop,
+//    stopLimit,
+//    exchangeStopLimit,
+//    trailingStop,
+//    exchangeTrailingStop,
+//    fok,
+//    exchangeFok,
+//    ioc,
+//    exchangeIoc
+//}
 
 
 
-public class BitfinexResponseOrderRest
-{
-    [JsonProperty("MTS")]
-    public string mts; //1678988263842, //MTS
-
-    [JsonProperty("TYPE")]
-    public string type;// "ou-req"order cancel request, //TYPE
-
-    [JsonProperty("MESSAGE_ID")]
-    public string messageId;//MESSAGE_ID
-
-    [JsonProperty("DATA ")]
-    public string data;   //DATA 
-
-    [JsonProperty("CODE")]
-    public string code;    //null, //CODE
-
-    [JsonProperty("STATUS")]
-    public string status; // (SUCCESS, ERROR, FAILURE, ..., //STATUS
-
-    [JsonProperty("TEXT")]
-    public string text; //text Submitting exchange limit buy order for 0.1 BTC."
-}
 
 
+//public class BitfinexResponseOrderRest
+//{
+//    [JsonProperty("MTS")]
+//    public string mts; //1678988263842, //MTS
 
-public class BitfinexOrderResponse
-{
-    public long MTS { get; set; }
-    public string TYPE { get; set; }
-    public int MESSAGE_ID { get; set; }
-    public object[] AdditionalFields { get; set; }
-    //public OrderData DATA { get; set; }
-    public int CODE { get; set; }
-    public string STATUS { get; set; }
-    public string TEXT { get; set; }
-}
+//    [JsonProperty("TYPE")]
+//    public string type;// "ou-req"order cancel request, //TYPE
 
-public class BitfinexOrderData
-{
-    internal object order;
+//    [JsonProperty("MESSAGE_ID")]
+//    public string messageId;//MESSAGE_ID
 
-    public int ID { get; set; }
-    public int GID { get; set; }
-    public int CID { get; set; }
-    public string SYMBOL { get; set; }
-    public long MTS_CREATE { get; set; }
-    public long MTS_UPDATE { get; set; }
-    public float AMOUNT { get; set; }
-    public float AMOUNT_ORIG { get; set; }
-    public string ORDER_TYPE { get; set; }
-    public string TYPE_PREV { get; set; }
-    public long MTS_TIF { get; set; }
-    public int FLAGS { get; set; }
-    public string STATUS { get; set; }
-    public float PRICE { get; set; }
-    public float PRICE_AVG { get; set; }
-    public float PRICE_TRAILING { get; set; }
-    public float PRICE_AUX_LIMIT { get; set; }
-    public int NOTIFY { get; set; }
-    public int HIDDEN { get; set; }
-    public int PLACED_ID { get; set; }
-    public string ROUTING { get; set; }
-    public dynamic META { get; set; }
-}
+//    [JsonProperty("DATA ")]
+//    public string data;   //DATA 
+
+//    [JsonProperty("CODE")]
+//    public string code;    //null, //CODE
+
+//    [JsonProperty("STATUS")]
+//    public string status; // (SUCCESS, ERROR, FAILURE, ..., //STATUS
+
+//    [JsonProperty("TEXT")]
+//    public string text; //text Submitting exchange limit buy order for 0.1 BTC."
+//}
+
+
+
+//public class BitfinexOrderResponse
+//{
+//    public long MTS { get; set; }
+//    public string TYPE { get; set; }
+//    public int MESSAGE_ID { get; set; }
+//    public object[] AdditionalFields { get; set; }
+//    //public OrderData DATA { get; set; }
+//    public int CODE { get; set; }
+//    public string STATUS { get; set; }
+//    public string TEXT { get; set; }
+//}
+
+//public class BitfinexOrderData
+//{
+//    internal object order;
+
+//    public int ID { get; set; }
+//    public int GID { get; set; }
+//    public int CID { get; set; }
+//    public string SYMBOL { get; set; }
+//    public long MTS_CREATE { get; set; }
+//    public long MTS_UPDATE { get; set; }
+//    public float AMOUNT { get; set; }
+//    public float AMOUNT_ORIG { get; set; }
+//    public string ORDER_TYPE { get; set; }
+//    public string TYPE_PREV { get; set; }
+//    public long MTS_TIF { get; set; }
+//    public int FLAGS { get; set; }
+//    public string STATUS { get; set; }
+//    public float PRICE { get; set; }
+//    public float PRICE_AVG { get; set; }
+//    public float PRICE_TRAILING { get; set; }
+//    public float PRICE_AUX_LIMIT { get; set; }
+//    public int NOTIFY { get; set; }
+//    public int HIDDEN { get; set; }
+//    public int PLACED_ID { get; set; }
+//    public string ROUTING { get; set; }
+//    public dynamic META { get; set; }
+//}
 
 
 

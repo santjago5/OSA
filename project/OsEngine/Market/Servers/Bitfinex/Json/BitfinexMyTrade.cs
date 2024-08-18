@@ -9,7 +9,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 {
     public class BitfinexMyTrade
     {
-        // POST https://api.bitfinex.com/v2/auth/r/trades/hist
+       
         [JsonProperty("ID")]
         public string TradeId;                   //402088407, //ID
 
