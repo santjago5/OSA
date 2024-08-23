@@ -40,6 +40,7 @@ using WebSocket = WebSocket4Net.WebSocket;
 
 
 
+
 namespace OsEngine.Market.Servers.Bitfinex
 {
     public class BitfinexServer : AServer//Класс с конечной логикой коннектора
@@ -858,7 +859,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
 
 
-             
+
 
                 if (_webSocketPublic != null)
                 {
@@ -918,7 +919,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (_webSocketPublic != null)
                 {
                     try
-                    { 
+                    {
                         _webSocketPublic.Close();
                     }
                     catch (Exception exception)
@@ -961,7 +962,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
 
         }
-       
+
         public event Action<MarketDepth> MarketDepthEvent;
 
 
@@ -1185,7 +1186,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 var entry = bookEntries[i]; // Извлечение текущей записи
 
                 // Если количество больше 0, это bid
-
+                //
                 // if (Convert.ToDecimal(entry.Amount) > 0)
                 if (entry.Amount.Contains("-"))
                 {
@@ -1283,6 +1284,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void UpdateOrderBook()
         {
+            // Десериализация сообщения в список объектов
+           // var responseDepth = JsonConvert.DeserializeObject<List<object>>(message);
             // Создание нового объекта MarketDepth для обновления стакана
             MarketDepth newMarketDepth = new MarketDepth
             {
@@ -1326,8 +1329,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                 var ask = depthAsks[i];
                 try
                 {
-                    decimal askPrice = Convert.ToDecimal(ask.Price, CultureInfo.InvariantCulture);
-                    decimal askAmount = Convert.ToDecimal(ask.Amount, CultureInfo.InvariantCulture);
+                    decimal askPrice = Convert.ToDecimal(ask.Price, CultureInfo.InvariantCulture); // или просто Convert.toDecimal
+                    decimal askAmount = Convert.ToDecimal(ask.Amount, CultureInfo.InvariantCulture); 
 
                     newMarketDepth.Asks.Add(new MarketDepthLevel
                     {
@@ -1336,17 +1339,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                         Ask = askAmount
                     });
                 }
-                catch (FormatException)
+                catch (Exception exception)
                 {
-                    // Логирование или обработка ошибки при неверном формате
-                    Console.WriteLine($"Invalid ask format: Price={ask.Price}, Amount={ask.Amount}");
+                    SendLogMessage(exception.ToString(), LogMessageType.Error);
                 }
-                catch (Exception ex)
-                {
-                    // Логирование или обработка других исключений
-                    Console.WriteLine($"Unexpected error: {ex.Message}");
-                }
-
             }
 
             // Вызов события обновления стакана
@@ -1443,7 +1439,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
-               
+
 
                 if (e.Exception != null)
                 {
@@ -2113,30 +2109,41 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-
+        //дописала округление объема
         private void UpdateMyTrade(string message)
         {
             try
             {
 
-
                 BitfinexMyTrade response = JsonConvert.DeserializeObject<BitfinexMyTrade>(message);
 
-                var time = Convert.ToInt64(response.Time);
+                if (response == null)
+                {
+                    return;
+                }
+                var time = Convert.ToInt64(response.Mts);
 
                 var myTrade = new MyTrade
                 {
-                   
+
                     Time = TimeManager.GetDateTimeFromTimeStamp(time),
                     SecurityNameCode = response.Symbol,
                     NumberOrderParent = response.OrderId,
-                    Price = Convert.ToDecimal(response.OrderPrice),
-                    NumberTrade = response.TradeId,
-                    //NumberPosition = response.TradeId,
+                    Price = (response.OrderPrice).ToDecimal(),
+                    NumberTrade = response.Id,
+                    //NumberPosition = response.Id,
                     Side = response.Amount.Contains("-") ? Side.Sell : Side.Buy,
                     //    Side = response.Amount > 0 ? Side.Buy : Side.Sell;
-                    Volume = Convert.ToDecimal(response.Amount)
+                   // Volume = (response.Amount).ToString().ToDecimal(),
+                    
                 };
+
+
+                // при покупке комиссия берется с монеты и объем уменьшается и появляются лишние знаки после запятой
+                decimal preVolume = myTrade.Side == Side.Sell ? response.Amount.ToDecimal() : response.Amount.ToDecimal() - response.Fee.ToDecimal();
+
+                myTrade.Volume = GetVolumeForMyTrade(response.Symbol, preVolume);
+
 
                 MyTradeEvent?.Invoke(myTrade);
             }
@@ -2146,6 +2153,34 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+
+        private Dictionary<string, int> _decimalVolume = new Dictionary<string, int>();
+        // метод для округления знаков после запятой
+        private decimal GetVolumeForMyTrade(string symbol, decimal preVolume)
+        {
+            int forTruncate = 1;
+
+            Dictionary<string, int>.Enumerator enumerator = _decimalVolume.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                string key = enumerator.Current.Key;
+                int value = enumerator.Current.Value;
+
+                if (key.Equals(symbol))
+                {
+                    if (value != 0)
+                    {
+                        for (int i = 0; i < value; i++)
+                        {
+                            forTruncate *= 10;
+                        }
+                    }
+                    return Math.Truncate(preVolume * forTruncate) / forTruncate; // при округлении может получиться больше доступного объема, поэтому обрезаем
+                }
+            }
+            return preVolume;
+        }
 
         private void UpdateOrder(string message)
         {
@@ -2189,12 +2224,12 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 MyOrderEvent?.Invoke(newOrder);
 
-                //если ордер исполнен, вызываем MyTradeEvent
-                if (stateType == OrderStateType.Done
-                    || stateType == OrderStateType.Patrial)
-                {
-                    UpdateMyTrade(message);//рекурсивный вызов метода
-                }
+                ////если ордер исполнен, вызываем MyTradeEvent
+                //if (stateType == OrderStateType.Done
+                //    || stateType == OrderStateType.Patrial)
+                //{
+                //    UpdateMyTrade(message);//рекурсивный вызов метода
+                //}
             }
             catch (Exception exception)
             {
@@ -2307,7 +2342,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private RateGate _rateGateChangePriceOrder = new RateGate(1, TimeSpan.FromMilliseconds(300));
 
-    
+
         public void SendOrder(Order order)
         {
             _rateGateSendOrder.WaitToProceed();
@@ -2322,12 +2357,13 @@ namespace OsEngine.Market.Servers.Bitfinex
                 Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", "."),
                 MtsCreate = order.TimeCreate.ToString(),
                 Status = order.State.ToString(),
-                AmountOrig = order.Side.ToString(),
+                //AmountOrig = order.Side.ToString(),
 
             };
 
             string apiPath = "v2/auth/w/order/submit";
             string typeOrder = ""; // Переменная для хранения типа ордера
+                                   //  decimal orderSide = 0;
             string orderSide = "";
 
             // Условие для определения типа ордера
@@ -2344,13 +2380,16 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             if (decimal.TryParse(data.Amount, out amount))
             {
+                // Изменение знака на отрицательный 
+
                 if (order.Side.ToString() == "Sell")
-                {
-                    orderSide = (-Math.Abs(amount)).ToString(); // Присваиваем отрицательное значение
+                {// Преобразование обратно в строку
+                    orderSide = (-amount).ToString();
                 }
+
                 else
                 {
-                    orderSide = data.Amount; // Для остальных случаев используем положительное значение
+                    orderSide = (data.Amount); // Для остальных случаев используем положительное значение
                 }
             }
             // Создание анонимного объекта с использованием переменной `type`
@@ -2362,25 +2401,18 @@ namespace OsEngine.Market.Servers.Bitfinex
                 amount = orderSide
             };
 
-            //// Создаем объект тела запроса
-            //var body = new
-            //{
-            //    type = "EXCHANGE LIMIT",
-            //    symbol = data.Symbol,
-            //    price = data.Price,
-            //    amount = data.Amount
-            //};
-
 
             // Сериализуем объект тела в JSON
 
-            string bodyJson = JsonConvert.SerializeObject(body);
+            //  string bodyJson = JsonConvert.SerializeObject(body);
+            string bodyJson = System.Text.Json.JsonSerializer.Serialize(body);
 
             // Создаем nonce как текущее время в миллисекундах
             string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
             // Создаем строку для подписи
             string signature = $"/api/{apiPath}{nonce}{bodyJson}";
+
 
             // Вычисляем подпись с использованием HMACSHA384
             string sig = ComputeHmacSha384(_secretKey, signature);
@@ -2412,70 +2444,52 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
 
-                    if (responseBody.Contains("on-req") && responseBody.StartsWith("[["))  //if (jsonResponse.Trim().StartsWith("["))
+
+                    //if (responseBody.Contains("on-req"))/* && responseBody.StartsWith("[[")) */ //if (jsonResponse.Trim().StartsWith("["))
+                    //{
+                    //    // Десериализация ответа как массив объектов
+
+                    // string responseBody = "[1723557977,\"on-req\",null,null,[[167966185075,null,1723557977011,\"tTRXUSD\",1723557977011,1723557977011,22,22,\"EXCHANGE LIMIT\",null,null,null,0,\"ACTIVE\",null,null,0.12948,0,0,0,null,null,null,0,0,null,null,null,\"API>BFX\",null,null,{}]],null,\"SUCCESS\",\"Submitting 1 orders.\"]";
+
+                    // Десериализация верхнего уровня в список объектов
+                    var responseArray = JsonConvert.DeserializeObject<List<object>>(responseBody);
+
+                    // Проверка размера массива перед извлечением значений
+                    if (responseArray != null)
                     {
-                        // Десериализация ответа как массив объектов
-                        List<BitfinexOrderData> stateResponseList = JsonConvert.DeserializeObject<List<BitfinexOrderData>>(responseBody);
-                        if (stateResponseList != null && stateResponseList.Count > 0)
+                        // Извлечение нужных элементов
+                        var dataJson = responseArray[4].ToString();
+
+                        string status = responseArray[6].ToString();
+                        string text = responseArray[7].ToString();
+
+                        // Десериализация dataJson в список заказов
+                        var ordersArray = JsonConvert.DeserializeObject<List<List<object>>>(dataJson);
+                        var orders = ordersArray[0]; // Получаем первый заказ из массива
+
+                        // Создание объекта BitfinexOrderData
+                        BitfinexOrderData orderData = new BitfinexOrderData
                         {
-                            var jResponse = stateResponseList[0]; // Берем первый объект из массива
-                            order.State = OrderStateType.Activ;
+                            Cid = Convert.ToString(orders[2]),
+                            Symbol = Convert.ToString(orders[3]),
+                        };
 
-                            order.NumberMarket = jResponse.Cid;
+
+                        order.State = OrderStateType.Activ;
+
+                        order.NumberMarket = orderData.Cid;//для массива
 
 
-                            SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.NumberUser},{order.State}", LogMessageType.Trade);
+                        SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{status},{text}", LogMessageType.Trade);
 
-                            MyOrderEvent?.Invoke(order);
-                        }
+                        MyOrderEvent?.Invoke(order);
                     }
-                    else
-                    {
-                        // Десериализация ответа как одиночного объекта
-                        BitfinexOrderData jResponse = JsonConvert.DeserializeObject<BitfinexOrderData>(responseBody);
-
-                        order.State = OrderStateType.Activ;//нужен?
-                        order.NumberMarket = jResponse.Cid;
-
-                        SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.NumberUser},{order.State}", LogMessageType.Trade);//под вопросом
-
-                        MyOrderEvent?.Invoke(order);//нужен?
-                    }
-
-
-
-
-                    //// Десериализация общего ответа
-                    //var apiResponse = JsonConvert.DeserializeObject<BitfinexResponseOrder>(responseBody);
-
-                    // // Десериализация данных ордера, если они есть
-                    // if (!string.IsNullOrEmpty(apiResponse.Data))
-                    // {
-                    //     var orderData = JsonConvert.DeserializeObject<List<BitfinexOrderData>>(apiResponse.Data);
-
-                    //     SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-                    //     order.State = OrderStateType.Activ;
-                    //     order.NumberMarket = orderData.Cid;
-                    // }
-
-
-
-
-                    //var jsonResponse = response.Content;
-                    //BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
-
-                    SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-
-                    //order.State = OrderStateType.Activ;
-                    //order.NumberMarket = stateResponse.Cid;
-
-
-                    //  MyOrderEvent?.Invoke(order);
                 }
                 else
                 {
 
                     SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
+
                     CreateOrderFail(order);
                     SendLogMessage("Order Fail", LogMessageType.Error);
                 }
@@ -2487,143 +2501,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
             }
 
-
         }
-
-     
-
-
-        //JsonSerializerSettings dataSerializerSettings = new JsonSerializerSettings();
-        // dataSerializerSettings.NullValueHandling = NullValueHandling.Ignore;// если маркет-ордер, то игнорим параметр цены
-
-        //    string jsonRequest = JsonConvert.SerializeObject(data, dataSerializerSettings);
-
-
-
-        //    try
-
-        //    {  
-        //        IRestResponse response = client.Execute(request);
-
-        //        // Отправляем запрос и получаем ответ
-        //      //  var response = client.Execute(request);
-
-        //        // Выводим тело ответа
-        //        string responseBody = response.Content;
-
-        //        if (response.StatusCode == HttpStatusCode.OK)
-        //        {
-        //            var jsonResponse = response.Content;
-        //            BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
-
-        //            SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-
-        //            order.State = OrderStateType.Activ;
-        //            order.NumberMarket = stateResponse.Cid;
-
-
-        //            MyOrderEvent?.Invoke(order);
-        //        }
-        //        else
-        //        {
-        //            SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
-
-        //            //CreateOrderFail(order);
-        //            //SendLogMessage("Order Fail", LogMessageType.Error);
-        //        }
-        //    }
-        //    catch (Exception exception)
-        //    {
-        //        CreateOrderFail(order);
-        //        SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
-        //    }
-        //}
-
-        //public void SendOrder(Order order)//Submit
-        //{
-        //    _rateGateSendOrder.WaitToProceed();
-
-
-        //    BitfinexOrder data = new BitfinexOrder();
-
-        //    data.Cid = order.NumberUser.ToString();
-        //    data.Symbol = order.SecurityNameCode;
-
-        //    data.Amount = (order.Side == Side.Buy ? "" : "-").ToString().ToLower();
-        //    data.TypePrev = order.TypeOrder.ToString().ToUpper();//надо с большой буквы или нет
-        //    data.Price = order.TypeOrder == OrderPriceType.Market ? null : order.Price.ToString().Replace(",", ".");
-
-        //    // data.Amount = order.Volume.ToString().Replace(",", ".");
-        //    data.Amount = order.Volume.ToString().Replace(",", ".");
-        //    data.MtsCreate = order.TimeCreate.ToString();
-        //    data.Status = order.State.ToString();
-
-
-
-        //    JsonSerializerSettings dataSerializerSettings = new JsonSerializerSettings();
-        //    dataSerializerSettings.NullValueHandling = NullValueHandling.Ignore;// если маркет-ордер, то игнорим параметр цены
-
-        //    string jsonRequest = JsonConvert.SerializeObject(data, dataSerializerSettings);
-
-        //     
-
-        //    string apiPath = "v2/auth/w/order/submit";
-        //    string signature = $"{_postUrl}/{apiPath}{nonce}{body}";
-        //    string sig = ComputeHmacSha384(_secretKey, signature);
-
-        //    RestClient client = new RestClient(_postUrl);
-        //    RestRequest request = new RestRequest(apiPath, Method.POST);
-        //    request.AddHeader("accept", "application/json");
-        //    request.AddHeader("bfx-nonce", nonce);
-        //    request.AddHeader("bfx-apikey", _publicKey);
-        //    request.AddHeader("bfx-signature", sig);
-        //    //request.AddJsonBody($"{{\"type\":\"{order.TypeOrder}\",\"symbol\":\"{order.SecurityNameCode}\",\"amount\":\"{order.Volume}\",\"price\":\"{order.Price}\"}}");
-        //    request.AddJsonBody($"{{\"type\":\"{data.TypePrev}\",\"symbol\":\"{data.Symbol}\",\"amount\":\"{data.Amount}\",\"price\":\"{data.Price}\"}}");
-
-        //    IRestResponse response = client.Execute(request);
-
-        //    try
-        //    {
-        //        if (response.StatusCode == HttpStatusCode.OK)
-        //        {
-        //            var jsonResponse = response.Content;
-        //            BitfinexOrder stateResponse = JsonConvert.DeserializeObject<BitfinexOrder>(jsonResponse);
-
-        //            SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-
-        //            order.State = OrderStateType.Activ;
-        //            order.NumberMarket = stateResponse.Cid;
-
-        //            SendLogMessage($"Order num {order.NumberUser} on exchange.", LogMessageType.Trade);
-
-
-        //            MyOrderEvent?.Invoke(order);
-        //        }
-
-        //        else
-        //        {
-        //            CreateOrderFail(order);
-        //            //order.State = OrderStateType.Fail;
-
-        //            SendLogMessage("Order Fail", LogMessageType.Error);
-
-
-        //            //if (response.Content != null)
-        //            //{
-        //            //    SendLogMessage("Fail reasons: "
-        //            //  + response.Content, LogMessageType.Error);
-        //            //}
-
-        //        }
-        //    }
-        //    catch (Exception exception)
-        //    {
-        //        CreateOrderFail(order);
-        //        SendLogMessage("Order send exception " + exception.ToString(), LogMessageType.Error);
-        //    }
-
-        //    MyOrderEvent.Invoke(order);
-        //}
 
 
 
@@ -2638,7 +2516,21 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
 
             string apiPath = "v2/auth/w/order/cancel/multi";
-            string signature = $"{_postUrl}/{apiPath}{nonce}";// {bodyJson}";
+            var body = new
+            {
+                all = 1  // Идентификатор ордера для отмены
+            };
+
+
+            //  string bodyJson = JsonConvert.SerializeObject(body);
+            string bodyJson = System.Text.Json.JsonSerializer.Serialize(body);
+
+            // Создаем nonce как текущее время в миллисекундах
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+          
+            // Создаем строку для подписи
+            string signature = $"/api/{apiPath}{nonce}{bodyJson}";
+         
             string sig = ComputeHmacSha384(_secretKey, signature);
 
             //post https://api.bitfinex.com/v2/auth/w/order/cancel/multi
@@ -2651,7 +2543,10 @@ namespace OsEngine.Market.Servers.Bitfinex
             request.AddHeader("bfx-apikey", _publicKey);
             request.AddHeader("bfx-signature", sig);
             //request.AddJsonBody("{\"all\":1}", false); //all\":1 отменить все ордера
+            request.AddJsonBody(body);
+
             IRestResponse response = client.Execute(request);
+
             try
             {
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -2679,38 +2574,46 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public void CancelAllOrdersToSecurity(Security security)
         {
-            rateGateCancelAllOrder.WaitToProceed();
+        //    rateGateCancelAllOrder.WaitToProceed();
+        ////https://api.bitfinex.com/v2 /auth/w/order/cancel/multi
 
-            string apiPath = "v2/auth/r/orders/security";// посмотреть
-            string signature = $"{_postUrl}/{apiPath}{nonce}";
-            string sig = ComputeHmacSha384(_secretKey, signature);
-            RestClient client = new RestClient(_postUrl);
-            RestRequest request = new RestRequest(apiPath, Method.POST);
-            request.AddHeader("accept", "application/json");
-            request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("bfx-nonce", nonce);
-            request.AddHeader("bfx-apikey", _publicKey);
-            request.AddHeader("bfx-signature", sig);
-            IRestResponse response = client.Execute(request);
-            try
-            {
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    if (response != null)
-                    {
-                        SendLogMessage($"Code: {response.StatusCode}", LogMessageType.Error);
-                    }
+        //    string apiPath = "v2/auth/w/order/cancel/multi";// 
+        //    string signature = $"{_postUrl}{apiPath}{nonce}";
+        //    string sig = ComputeHmacSha384(_secretKey, signature);
+        //    RestClient client = new RestClient(_postUrl);
+        //    RestRequest request = new RestRequest(apiPath, Method.POST);
+        //    request.AddHeader("accept", "application/json");
+        //    request.AddHeader("bfx-nonce", nonce);
+        //    request.AddHeader("bfx-apikey", _publicKey);
+        //    request.AddHeader("bfx-signature", sig);
+        //    // Добавление тела запроса в формате JSON
+        //    request.AddJsonBody("{\"all\":1}");
 
-                    else
-                    {
-                        SendLogMessage($" {response}", LogMessageType.Error);
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                SendLogMessage(exception.ToString(), LogMessageType.Error);
-            }
+          
+        //    // Отправляем запрос и получаем ответ
+        //    var response = client.Execute(request);
+
+        //    // Выводим тело ответа
+        //    string responseBody = response.Content;
+        //    try
+        //    {
+        //        if (response.StatusCode == HttpStatusCode.OK)
+        //        {
+        //            if (response != null)
+        //            {
+        //                SendLogMessage($"Code: {response.StatusCode}", LogMessageType.Error);
+        //            }
+
+        //            else
+        //            {
+        //                SendLogMessage($" {response}", LogMessageType.Error);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        SendLogMessage(exception.ToString(), LogMessageType.Error);
+        //    }
         }
 
 
@@ -2718,47 +2621,76 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             _rateGateCancelOrder.WaitToProceed();
 
+            // Формирование тела запроса с указанием ID ордера
+            var body = new
+            {
+                id = order.NumberMarket  // Идентификатор ордера для отмены
+            };
             string apiPath = "v2/auth/w/order/cancel";
-           //  string signature = $"/api/{apiPath}{nonce}{body}";
-           string signature = $"/api/{apiPath}{nonce}";
+            // Сериализуем объект тела в JSON
+
+            //  string bodyJson = JsonConvert.SerializeObject(body);
+            string bodyJson = System.Text.Json.JsonSerializer.Serialize(body);
+
+            // Создаем nonce как текущее время в миллисекундах
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+
+            // Создаем строку для подписи
+            string signature = $"/api/{apiPath}{nonce}{bodyJson}";
+
+
+            // Вычисляем подпись с использованием HMACSHA384
             string sig = ComputeHmacSha384(_secretKey, signature);
+
+            // // Создаем клиента RestSharp
             var client = new RestClient(_postUrl);
+
+            // Создаем запрос типа POST
             var request = new RestRequest(apiPath, Method.POST);
 
+            // Добавляем заголовки
             request.AddHeader("accept", "application/json");
             request.AddHeader("bfx-nonce", nonce);
             request.AddHeader("bfx-apikey", _publicKey);
             request.AddHeader("bfx-signature", sig);
 
             // Добавляем тело запроса в формате JSON
-            string jsonBody = $"{{\"id\":{order.NumberMarket}\"}}";
-            request.AddJsonBody(jsonBody);
+            request.AddJsonBody(body); //
 
 
+            // Отправляем запрос и получаем ответ
+            var response = client.Execute(request);
 
-            IRestResponse response = client.Execute(request);
-
+            // Выводим тело ответа
+            string responseBody = response.Content;
+           
             try
             {
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    SendLogMessage($"Order canceled", LogMessageType.Trade);
+                    //var responseArray = JsonConvert.DeserializeObject<List<object>>(responseBody);
+
+                    SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.System);
                 }
 
                 else
                 {
                     CreateOrderFail(order);
-                    SendLogMessage($" {response}", LogMessageType.Error);
-                }
+                    SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, message - {response.ErrorMessage}", LogMessageType.Error);
 
+                    if (response.Content != null)
+                    {
+                        SendLogMessage("Failure reasons: " + response.Content, LogMessageType.Error);
+                    }
+                }
+             
             }
             catch (Exception exception)
             {
                 CreateOrderFail(order);
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
-
+                SendLogMessage($"Http State Code: {response.StatusCode} - {response.Content}", LogMessageType.Error);
             }
-
         }
 
         private string ComputeHmacSha384(string apiSecret, string signature)
@@ -2771,10 +2703,101 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+        private RateGate rateGateChangePriceOrder = new RateGate(1, TimeSpan.FromMilliseconds(350));
+
+
         public void ChangeOrderPrice(Order order, decimal newPrice)
         {
+            // post https://api.bitfinex.com/v2/auth/w/order/update
             try
             {
+
+                rateGateChangePriceOrder.WaitToProceed();
+
+                // Проверка типа ордера
+                if (order.TypeOrder == OrderPriceType.Market)
+                {
+                    SendLogMessage("Can't change price for market order", LogMessageType.Error);
+                    return;
+                }
+
+                string apiPath = "v2/auth/w/order/update";
+
+                var body = new
+                {
+
+
+                    id = order.NumberMarket,  // Идентификатор ордера
+                    price = newPrice.ToString(), // Новая цена
+                                                 // amount = order.Volume.ToString()// новый объем
+                };
+
+                //  string bodyJson = JsonConvert.SerializeObject(body);
+                string bodyJson = System.Text.Json.JsonSerializer.Serialize(body);
+
+                // Создаем nonce как текущее время в миллисекундах
+                string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+
+                // Создаем строку для подписи
+                string signature = $"/api/{apiPath}{nonce}{bodyJson}";
+
+                // Вычисляем подпись с использованием HMACSHA384
+                string sig = ComputeHmacSha384(_secretKey, signature);
+
+                // Создаем клиента RestSharp
+                var client = new RestClient(_postUrl);
+
+                // Создаем запрос типа POST
+                var request = new RestRequest(apiPath, Method.POST);
+
+                // Добавляем заголовки
+                request.AddHeader("accept", "application/json");
+                request.AddHeader("bfx-nonce", nonce);
+                request.AddHeader("bfx-apikey", _publicKey);
+                request.AddHeader("bfx-signature", sig);
+
+                // Добавляем тело запроса в формате JSON
+                request.AddJsonBody(body); //
+
+                // Количество оставшегося объема ордера
+                int qty = Convert.ToInt32(order.Volume - order.VolumeExecute);
+
+                // Проверка, что ордер активен и есть неисполненный объем
+                if (qty <= 0 || order.State != OrderStateType.Activ)
+                {
+                    SendLogMessage("Can't change price for the order. It is not in Active state", LogMessageType.Error);
+                    return;
+                }
+
+                // Отправляем запрос и получаем ответ
+                var response = client.Execute(request);
+
+                // Выводим тело ответа
+                string responseBody = response.Content;
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    SendLogMessage("Order change price. New price: " + newPrice
+                      + "  " + order.SecurityNameCode, LogMessageType.System);
+
+
+                    order.Price = newPrice;
+
+                    // Вызов события изменения ордера
+                    MyOrderEvent?.Invoke(order);
+
+                }
+                else
+                {
+                    SendLogMessage("Change price order Fail. Status: "
+                                + response.StatusCode + "  " + order.SecurityNameCode, LogMessageType.Error);
+
+                    if (response.Content != null)
+                    {
+                        SendLogMessage("Fail reasons: "
+                      + response.Content, LogMessageType.Error);
+                    }
+                }
 
             }
             catch (Exception exception)
@@ -2826,18 +2849,6 @@ namespace OsEngine.Market.Servers.Bitfinex
         #endregion
 
 
-
-
-
-        public enum BitfinexSubType
-        {
-            Trades,
-            MarketDepth,
-            Porfolio,
-            Positions,
-            Orders,
-            MyTrades
-        }
     }
 }
 

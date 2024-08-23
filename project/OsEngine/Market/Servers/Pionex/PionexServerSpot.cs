@@ -821,6 +821,8 @@ namespace OsEngine.Market.Servers.Pionex
             MyTradeEvent(newTrade);
         }
 
+        
+        
         private decimal GetVolumeForMyTrade(string symbol, decimal preVolume)
         {
             int forTruncate = 1;
