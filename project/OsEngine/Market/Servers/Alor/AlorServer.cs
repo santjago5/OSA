@@ -2567,6 +2567,8 @@ namespace OsEngine.Market.Servers.Alor
             return null;
         }
 
+       
+
         private List<MyTrade> GetMyTradesBySecurity(string security, string portfolio)
         {
             try

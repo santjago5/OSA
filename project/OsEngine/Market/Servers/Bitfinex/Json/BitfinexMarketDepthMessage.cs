@@ -36,20 +36,3 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
   
 }
-
-//public class BitfinexMarketDepth //Total amount available at that price level (if AMOUNT > 0 then bid else ask)
-//{
-//    [JsonProperty("SYMBOL")]
-//    public string symbol { get; set; }
-
-//    [JsonProperty("BID")]
-//    public string bid { get; set; }
-
-//    [JsonProperty("ASK")]
-//    public string ask { get; set; }
-
-//    [JsonProperty("MTS")]
-//    public string time { get; set; }
-
-
-//}
