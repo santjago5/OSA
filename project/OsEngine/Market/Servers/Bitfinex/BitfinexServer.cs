@@ -1103,8 +1103,13 @@ namespace OsEngine.Market.Servers.Bitfinex
         // Снимок(snapshot) : Структура данных содержит массив массивов, где каждый внутренний массив представляет собой запись в стакане(book entry).
         //Обновление(update) : Структура данных содержит только один массив, представляющий одну запись в стакане(book entry).
 
+        MarketDepth marketDepth = new MarketDepth();
 
-      
+        // Инициализируем списки для ask и bid уровней
+        List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
+        List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
+
+
         public void ProcessOrderBookResponse(string jsonResponse, int chanelId, string symbol)
         {
             if (chanelId == tradeChannelId)
@@ -1117,12 +1122,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             //    
             //    return;
             //}
-            //MarketDepth marketDepth = new MarketDepth();
-
-            //// Инициализируем списки для ask и bid уровней
-            //List<MarketDepthLevel> ascs = new List<MarketDepthLevel>();
-            //List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
-          
+            
 
 
             JsonDocument document = JsonDocument.Parse(jsonResponse);
@@ -1131,8 +1131,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             int channelId = root[0].GetInt32();
             JsonElement data = root[1];
 
-           
-     
+
+
 
             if (root.ValueKind == JsonValueKind.Object)
             {
@@ -1142,15 +1142,16 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
             }
-               MarketDepth marketDepth = new MarketDepth();
+
             // Проверяем, является ли data массивом массивов (snapshot)
             if (data.ValueKind == JsonValueKind.Array && data[0].ValueKind == JsonValueKind.Array)
             {
-                // Инициализируем списки для ask и bid уровней
-                List<MarketDepthLevel> ascs = new List<MarketDepthLevel>();
-                List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
+
 
                 marketDepth.SecurityNameCode = symbol;
+                // Инициализируем списки для ask и bid уровней
+                List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
+                List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
 
                 // Это snapshot
                 //var snapshot = new BitfinexBookSnapshot
@@ -1160,7 +1161,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 // Очистка старых данных и добавление новых уровней
                 bids.Clear();
-                ascs.Clear();
+                asks.Clear();
 
                 // Используем цикл for для итерации по элементам массива
                 for (int i = 0; i < data.GetArrayLength(); i++)
@@ -1190,14 +1191,17 @@ namespace OsEngine.Market.Servers.Bitfinex
                             Ask = Math.Abs(amount)
                         };
                         //marketDepth.Asks.Add(askLevel);
-                        ascs.Add(askLevel);
+                        asks.Add(askLevel);
                     }
                 }
 
                 marketDepth.Time = DateTime.UtcNow;
 
-                // Вызов метода обработки стакана
-               // HandleMarketDepth(_marketDepth);
+                //// Присваиваем отсортированные списки ask и bid уровней ордербуку
+                marketDepth.Asks = asks;
+                marketDepth.Bids = bids;
+                //marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64());
+
             }
             else if (data.ValueKind == JsonValueKind.Array)
             {
@@ -1212,27 +1216,30 @@ namespace OsEngine.Market.Servers.Bitfinex
                     if (amount > 0)
                     {
                         for (int i = 0; i < marketDepth.Bids.Count; i++)
+                       
                         {
-                            //if (marketDepth.Bids[i].Price == price)
-                                if (marketDepth.Bids[i].Price == price)
-                                {
-                               // marketDepth.Bids.RemoveAt(i);
-                               marketDepth.Bids.RemoveAt(i);
+                            if (marketDepth.Bids[i].Price == price)
+                            {
+                                 marketDepth.Bids.RemoveAt(i);
+                               
                                 break;
-                                }
+                            }
                         }
                     }
                     else// Удаление уровня из асков
                     {
-                        for (int i = 0; i <marketDepth.Asks.Count; i++)
+                        for (int i = 0; i < marketDepth.Asks.Count; i++)
+                  
                         {
-                            //if (marketDepth.Asks[i].Price == price)
-                            if (marketDepth.Asks[i].Price == price)
-                            {
-                                //marketDepth.Asks.RemoveAt(i);
-                                marketDepth.Asks.RemoveAt(i);
-                                break;
-                            }
+                            
+                                if (marketDepth.Asks[i].Price == price)
+
+                                {
+                                    marketDepth.Asks.RemoveAt(i);
+                              
+                                    break;
+                                }
+                            
                         }
                     }
                 }
@@ -1251,20 +1258,19 @@ namespace OsEngine.Market.Servers.Bitfinex
                         bool updated = false;
                         for (int i = 0; i < marketDepth.Bids.Count; i++)
                         {
-                            //if (marketDepth.Bids[i].Price == price)
+
                             if (marketDepth.Bids[i].Price == price)
                             {
-                                 marketDepth.Bids[i] = level; // Обновление уровня
+                                marketDepth.Bids[i] = level; // Обновление уровня
 
-                               //bids[i] = level;
-                               updated = true;
+                                updated = true;
                                 break;
                             }
                         }
                         if (!updated)
                         {
-                            marketDepth.Bids.Add(level); // Добавление нового уровня
-                             //bids.Add(level);
+                             marketDepth.Bids.Add(level); // Добавление нового уровня
+                        
                         }
                     }
                     else
@@ -1272,41 +1278,44 @@ namespace OsEngine.Market.Servers.Bitfinex
                         bool updated = false;
                         for (int i = 0; i < marketDepth.Asks.Count; i++)
                         {
-                            if (marketDepth.Asks[i].Price == price)
+                             if (marketDepth.Asks[i].Price == price)
+                       
                             {
-                                marketDepth.Asks[i] = level; // Обновление уровня
+                                 marketDepth.Asks[i] = level; // Обновление уровня
+
+                               
                                 updated = true;
                                 break;
                             }
                         }
                         if (!updated)
                         {
-                            marketDepth.Asks.Add(level); /// Добавление нового уровня
-                            //ascs.Add(level);
+                             marketDepth.Asks.Add(level); /// Добавление нового уровня
+                            
                         }
                     }
                 }
 
-               marketDepth.Time = DateTime.UtcNow;
+                    marketDepth.Time = DateTime.UtcNow;
+                // Сортировка ask по возрастанию (сначала наименьшие цены)
+                asks.Sort((x, y) => x.Price.CompareTo(y.Price));
 
-                // Вызов метода обработки стакана
-               // HandleMarketDepth(_marketDepth);
-            }
-
-            //// Присваиваем отсортированные списки ask и bid уровней ордербуку
-            //marketDepth.Asks = ascs;
-            //marketDepth.Bids = bids;
-            //marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64());
+                // Сортировка bid по убыванию (сначала наибольшие цены)
+                bids.Sort((x, y) => y.Price.CompareTo(x.Price));
 
 
-            if (marketDepth.Asks.Count == 0 ||
-                marketDepth.Bids.Count == 0)
-            {
-                return;
-            }
-            
-            MarketDepthEvent(marketDepth);
+                if (marketDepth.Asks.Count == 0 ||
+                    marketDepth.Bids.Count == 0)
+                {
+                    return;
+                }
+
+            } 
+                  MarketDepthEvent(marketDepth);
         }
+
+
+        
 
 
 
@@ -1386,7 +1395,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    MarketDepth marketDepth = new MarketDepth();
 
         //    // Инициализируем списки для ask и bid уровней
-        //    List<MarketDepthLevel> ascs = new List<MarketDepthLevel>();
+        //    List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
         //    List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
 
         //    // Устанавливаем имя инструмента, которое связано с данным каналом
@@ -1404,7 +1413,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //                Ask = Math.Abs((entry.Amount).ToDecimal()), // Берем абсолютное значение для ask
         //                Price = (entry.Price).ToDecimal()
         //            };
-        //            ascs.Add(newMDLevel);
+        //            asks.Add(newMDLevel);
         //        }
         //    }
 
@@ -1425,7 +1434,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
 
         //    // Присваиваем отсортированные списки ask и bid уровней ордербуку
-        //    marketDepth.Asks = ascs;
+        //    marketDepth.Asks = asks;
         //    marketDepth.Bids = bids;
         //    marketDepth.Time = DateTime.UtcNow;  // Здесь может быть установлено текущее время или время из данных
 
@@ -1448,7 +1457,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    marketDepth.SecurityNameCode = update.ChannelId;  // предполагается, что Symbol был добавлен в класс BitfinexBookSnapshot
 
         //    // Инициализируем списки для ask и bid уровней
-        //    List<MarketDepthLevel> ascs = new List<MarketDepthLevel>();
+        //    List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
         //    List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
 
 
@@ -1477,7 +1486,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //            Ask = Math.Abs((entry.Amount).ToDecimal()), // Берем абсолютное значение для ask
         //            Price = (entry.Price).ToDecimal()
         //        };
-        //        ascs.Add(newMDLevel);
+        //        asks.Add(newMDLevel);
         //    }
 
         //    else if ((entry.Amount).ToDecimal() > 0)
@@ -1492,9 +1501,9 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    }
 
         //        // Присваиваем отсортированные списки ask и bid уровней ордербуку
-        //        marketDepth.Asks = ascs;
+        //        marketDepth.Asks = asks;
         //        marketDepth.Bids = bids;
-        
+
         //        marketDepth.Time = DateTime.UtcNow;  // Здесь может быть установлено текущее время или время из данных
 
         //        //// Проверка, что оба списка не пусты
@@ -2045,8 +2054,10 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                             //ProcessOrderBookResponse(message, _currentSymbol);
                             ProcessOrderBookResponse(message, chanelId, _currentSymbol);
-                        }
 
+                           
+                        }
+                       
 
                         // Извлечение Channel ID
 
