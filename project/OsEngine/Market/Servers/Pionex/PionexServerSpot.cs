@@ -764,6 +764,7 @@ namespace OsEngine.Market.Servers.Pionex
             marketDepth.Bids = bids;
             marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(responseDepth.timestamp));
 
+
             if(marketDepth.Asks.Count == 0 ||
                 marketDepth.Bids.Count == 0)
             {

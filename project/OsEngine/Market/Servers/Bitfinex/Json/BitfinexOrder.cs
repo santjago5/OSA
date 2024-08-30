@@ -49,6 +49,59 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     }
 
 
+    //public class BitfinexOrder
+    //{
+    //    // Уникальный идентификатор ордера
+    //    public long Id { get; set; }
+
+    //    // Торговая пара (например, tBTCUSD)
+    //    public string Symbol { get; set; }
+
+    //    // Момент создания ордера в формате Unix timestamp
+    //    public long MtsCreate { get; set; }
+
+    //    // Момент обновления ордера в формате Unix timestamp
+    //    public long MtsUpdate { get; set; }
+
+    //    // ID клиента
+    //    public long ClientOrderId { get; set; }
+
+    //    // Цена ордера
+    //    public decimal Price { get; set; }
+
+    //    // Средняя цена исполнения ордера
+    //    public decimal AvgExecutionPrice { get; set; }
+
+    //    // Объем ордера (например, 0.1 BTC)
+    //    public decimal Amount { get; set; }
+
+    //    // Исполненный объем ордера
+    //    public decimal AmountExecuted { get; set; }
+
+    //    // Сторона ордера (1 = покупка, -1 = продажа)
+    //    public int OrderType { get; set; }
+
+    //    // Тип ордера (например, LIMIT, MARKET)
+    //    public string Type { get; set; }
+
+    //    // Флаг статуса ордера (например, ACTIVE, EXECUTED, CANCELED)
+    //    public string Status { get; set; }
+
+    //    // Дополнительное поле с информацией о прайсе трейлинга (например, для трейлинг-стопа)
+    //    public decimal PriceTrailing { get; set; }
+
+    //    // Дополнительное поле с информацией о прайсе скрытого ордера
+    //    public decimal PriceAuxLimit { get; set; }
+
+    //    // Флаг - скрытый ли ордер
+    //    public bool IsHidden { get; set; }
+
+    //    // Флаг - Post-Only ордер
+    //    public bool IsPostOnly { get; set; }
+
+    //    // Дополнительные комментарии/информация
+    //    public string Meta { get; set; }
+    //}
 
 
 
@@ -56,7 +109,7 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
 
 
- 
+
 
     //"Submitting update to exchange limit buy order for 0.1 BTC." //TEXT
 
