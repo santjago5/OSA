@@ -1158,10 +1158,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 };
 
                 marketDepth.SecurityNameCode = symbol;
-                // Инициализируем списки для ask и bid уровней
-                List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
-                List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
-
+               
              
 
                 // Очистка старых данных и добавление новых уровней
@@ -2540,7 +2537,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     return;
                 }
-                if (string.IsNullOrEmpty(response.Cid))
+                 if (string.IsNullOrEmpty(response.Cid))
+                //if (string.IsNullOrEmpty(response.Id))
                 {
                     return;
                 }
@@ -2808,14 +2806,19 @@ namespace OsEngine.Market.Servers.Bitfinex
                         // Создание объекта BitfinexOrderData
                         BitfinexOrderData orderData = new BitfinexOrderData
                         {
-                            Cid = Convert.ToString(orders[2]),
+                           //Cid = Convert.ToString(orders[2]),
+                            Id = Convert.ToString(orders[0]),
                             Symbol = Convert.ToString(orders[3]),
                         };
 
 
                         order.State = OrderStateType.Activ;
+                        order.NumberMarket = orderData.Id;  //для массива
+                        //order.NumberMarket = orderData.Cid;//для массива
+                  
 
-                        order.NumberMarket = orderData.Cid;//для массива
+                        //Order order = ConvertToOsEngineOrder(orderData, PortfolioName);
+
 
 
                         SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{status},{text}", LogMessageType.Trade);
@@ -2963,11 +2966,14 @@ namespace OsEngine.Market.Servers.Bitfinex
         public void CancelOrder(Order order)
         {
             _rateGateCancelOrder.WaitToProceed();
+            long orderId = Convert.ToInt64(order.NumberMarket); 
 
             // Формирование тела запроса с указанием ID ордера
             var body = new
             {
-                id = order.NumberMarket  // Идентификатор ордера для отмены
+                //id = order.NumberMarket  // Идентификатор ордера для отмены
+                id=orderId
+                 
             };
             string apiPath = "v2/auth/w/order/cancel";
             // Сериализуем объект тела в JSON
@@ -3011,7 +3017,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    //var responseArray = JsonConvert.DeserializeObject<List<object>>(responseBody);
+                    var responseArray = JsonConvert.DeserializeObject<List<object>>(responseBody);
 
                     SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.System);
                 }
