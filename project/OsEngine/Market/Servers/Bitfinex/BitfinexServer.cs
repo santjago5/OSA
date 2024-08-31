@@ -1186,6 +1186,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                         };
                         //marketDepth.Bids.Add(bidLevel);
                         bids.Add(bidLevel);
+
+                      
                     }
                     else
                     {
@@ -1197,15 +1199,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                         };
                         //marketDepth.Asks.Add(askLevel);
                         asks.Add(askLevel);
+
+                      
                     }
+
                 }
 
-                marketDepth.Time = DateTime.UtcNow;
 
-                //// Присваиваем отсортированные списки ask и bid уровней ордербуку
-                marketDepth.Asks = asks;
-                marketDepth.Bids = bids;
-                //marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64());
+               // marketDepth.Time = DateTime.UtcNow;
 
             }
             else if (data.ValueKind == JsonValueKind.Array)
@@ -1236,7 +1237,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                         for (int i = 0; i < marketDepth.Asks.Count; i++)
                   
                         {
-                            
                                 if (marketDepth.Asks[i].Price == price)
 
                                 {
@@ -1247,6 +1247,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                             
                         }
                     }
+                   
+
                 }
                 else
                 {
@@ -1277,6 +1279,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                              marketDepth.Bids.Add(level); // Добавление нового уровня
                         
                         }
+
+                   
                     }
                     else
                     {
@@ -1298,17 +1302,26 @@ namespace OsEngine.Market.Servers.Bitfinex
                              marketDepth.Asks.Add(level); /// Добавление нового уровня
                             
                         }
-                    }
+                        
+                     }   
+             
+
                 }
 
-                    marketDepth.Time = DateTime.UtcNow;
-                // Сортировка ask по возрастанию (сначала наименьшие цены)
-                asks.Sort((x, y) => x.Price.CompareTo(y.Price));
+                //// Присваиваем отсортированные списки ask и bid уровней ордербуку
+                marketDepth.Asks = asks;
+                marketDepth.Bids = bids;
 
                 // Сортировка bid по убыванию (сначала наибольшие цены)
-                bids.Sort((x, y) => y.Price.CompareTo(x.Price));
+                marketDepth.Bids.Sort((x, y) => y.Price.CompareTo(x.Price));
 
+                // Сортировка ask по возрастанию (сначала наименьшие цены)
+                marketDepth.Asks.Sort((x, y) => x.Price.CompareTo(y.Price));
 
+                //marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64());
+
+                marketDepth.Time = DateTime.UtcNow;
+              
                 if (marketDepth.Asks.Count == 0 ||
                     marketDepth.Bids.Count == 0)
                 {
