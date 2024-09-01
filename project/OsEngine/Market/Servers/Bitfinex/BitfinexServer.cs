@@ -2174,6 +2174,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
             }
+
         }
 
 
@@ -2306,6 +2307,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 };
 
                 ServerTime = newTrade.Time;
+
                 NewTradesEvent?.Invoke(newTrade);
             }
             catch (Exception exception)
@@ -2552,7 +2554,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                var newOrder = new Order
+                var updateOrder = new Order
                 {
                     SecurityNameCode = response.Symbol,
                     TimeCallBack = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(response.MtsCreate)),
@@ -2562,15 +2564,23 @@ namespace OsEngine.Market.Servers.Bitfinex
                     //State = (OrderStateType)Enum.Parse(typeof(OrderStateType), response.Status),
                     State = stateType,
                     TypeOrder = response.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) ? OrderPriceType.Market : OrderPriceType.Limit,
-                    Volume = response.Status.Equals("EXECUTED") ? (response.AmountOrig).ToDecimal() : Convert.ToDecimal(response.Amount),//ACTIVE
+                 //   Volume = response.Status.Equals("EXECUTED") ? (response.AmountOrig).ToDecimal() : Convert.ToDecimal(response.Amount),//ACTIVE
                    // Volume = stateType == OrderStateType.Done ? response.Amount.ToDecimal() : response.AmountOrig.ToDecimal(),  //что тут должно быть?
+                    Volume= Math.Abs(response.Amount.ToDecimal()),
                     Price = (response.Price).ToDecimal(),
                     ServerType = ServerType.Bitfinex,
                     PortfolioNumber = "Bitfinex"
 
                 };
 
-                MyOrderEvent?.Invoke(newOrder);
+                MyOrderEvent?.Invoke(updateOrder);
+
+                //если ордер исполнен, вызываем MyTradeEvent
+                if (stateType == OrderStateType.Done
+                    || stateType == OrderStateType.Patrial)
+                {
+                    UpdateMyTrade(message);
+                }
             }
             catch (Exception exception)
             {
@@ -2581,7 +2591,8 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             OrderStateType stateType;
 
-            if (status.Equals("ACTIVE", StringComparison.OrdinalIgnoreCase ))/*&& filledSize == "0"*///игнорирование регистра
+           // if (status.Equals("ACTIVE", StringComparison.OrdinalIgnoreCase ))/*&& filledSize == "0"*///игнорирование регистра
+            if(status == "ACTIVE")
             {
                 stateType = OrderStateType.Activ;
             }
@@ -2791,9 +2802,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     // Десериализация верхнего уровня в список объектов
                     var responseArray = JsonConvert.DeserializeObject<List<object>>(responseBody);
-
-                    // Проверка размера массива перед извлечением значений
-                    if (responseArray != null)
+                   
+                     // Проверка размера массива перед извлечением значений
+                    if (responseArray == null)
+                     { 
+                        return; 
+                    }
+                      
+                    if (responseArray .Contains("on-req"))
                     {
                         // Извлечение нужных элементов
                         var dataJson = responseArray[4].ToString();
@@ -2970,13 +2986,13 @@ namespace OsEngine.Market.Servers.Bitfinex
         public void CancelOrder(Order order)
         {
             _rateGateCancelOrder.WaitToProceed();
-          //  long orderId = Convert.ToInt64(order.NumberMarket); 
+            long orderId = Convert.ToInt64(order.NumberMarket); 
 
             // Формирование тела запроса с указанием ID ордера
             var body = new
             {
-                id = order.NumberMarket  // Идентификатор ордера для отмены
-                //id=orderId
+                //id = order.NumberMarket  // Идентификатор ордера для отмены
+                id=orderId
                  
             };
             string apiPath = "v2/auth/w/order/cancel";
@@ -3027,26 +3043,19 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var responseJson = JsonConvert.DeserializeObject<List<object>>(responseBody);
 
 
-                    if (responseJson[0].ToString() == "0")
-                    {
-                        if (responseJson.Contains("oc") || responseJson.Contains("n"))
+                        if (responseJson.Contains("oc-req") || responseJson.Contains("n"))
                         {
-                            SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.System);
+                            SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
                         }
-                    }
+                    
                 }
 
                 else
                 {
                     CreateOrderFail(order);
-                    SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, message - {response.ErrorMessage}", LogMessageType.Error);
-
-                    if (response.Content != null)
-                    {
-                        SendLogMessage($"Failure reasons: { response.StatusCode} - { response.Content}", LogMessageType.Error);
-                    }
+                    SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, {response.ErrorMessage}", LogMessageType.Error);
                 }
-             
+             //EVENT: oc-req
             }
             catch (Exception exception)
             {
