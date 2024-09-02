@@ -35,6 +35,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 using static Grpc.Core.Metadata;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
 using WebSocketSharp;
+using OsEngine.Market.Servers.BitStamp.BitStampEntity;
 
 
 
@@ -2266,6 +2267,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
+
                 // Проверка и конвертация поля Price
                 decimal price;
                 try
@@ -2482,7 +2484,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     //NumberTrade = response.Id,
                     //NumberPosition = response.Id,
                     Side = response.Amount.Contains("-") ? Side.Sell : Side.Buy,
-                    //   Side = response.Amount > 0 ? Side.Buy : Side.Sell;
+                    // Side = response.Amount > 0 ? Side.Buy : Side.Sell;
                    // Volume = (response.Amount).ToString().ToDecimal(),
                     
                 };
@@ -2547,7 +2549,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                OrderStateType stateType = GetOrderState(response.Status, response.Amount);
+                OrderStateType stateType = GetOrderState(response.Status/*, response.Amount*/);
 
                 if (response.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) && stateType == OrderStateType.Activ)//StringComparison.OrdinalIgnoreCase*что сравнение должно быть нечувствительным к регистру.
                 {
@@ -2587,34 +2589,30 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
-        private OrderStateType GetOrderState(string status, string filledSize)
+        private OrderStateType GetOrderState(string orderStateResponse)
         {
             OrderStateType stateType;
 
-           // if (status.Equals("ACTIVE", StringComparison.OrdinalIgnoreCase ))/*&& filledSize == "0"*///игнорирование регистра
-            if(status == "ACTIVE")
+            switch (orderStateResponse)
             {
-                stateType = OrderStateType.Activ;
-            }
-            else if (status == "EXECUTED" && filledSize == "0")
-            {
-                stateType = OrderStateType.Done;
-            }
-            else if (status == "PARTIALLY FILLED" && filledSize != "0")
-            {
-                stateType = OrderStateType.Patrial;
-            }
-            else if (status == "CANCELED" && filledSize != "0")
-            {
-                stateType = OrderStateType.Cancel;
-            }
-            else if (status == "REJECTED" /*&& filledSize == "0"*/)
-            {
-                stateType = OrderStateType.Fail;
-            }
-            else
-            {
-                stateType = OrderStateType.None; // Handle unanticipated status values
+                case ("ACTIVE"):
+                    stateType = OrderStateType.Activ;
+                    break;
+                case ("EXECUTED"):
+                    stateType = OrderStateType.Done;
+                    break;
+                case ("REJECTED"):
+                    stateType = OrderStateType.Fail;
+                    break;
+                case ("CANCELED"):
+                    stateType = OrderStateType.Cancel;
+                    break;
+                case "PARTIALLY FILLED":
+                    stateType = OrderStateType.Patrial;
+                    break;
+                default:
+                    stateType = OrderStateType.None;
+                    break;
             }
 
             return stateType;
@@ -2794,9 +2792,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
 
 
-                    //if (responseBody.Contains("on-req"))/* && responseBody.StartsWith("[[")) */ //if (jsonResponse.Trim().StartsWith("["))
-                    //{
-                    //    // Десериализация ответа как массив объектов
+                  
+                      // Десериализация ответа как массив объектов
 
                     // string responseBody = "[1723557977,\"on-req\",null,null,[[167966185075,null,1723557977011,\"tTRXUSD\",1723557977011,1723557977011,22,22,\"EXCHANGE LIMIT\",null,null,null,0,\"ACTIVE\",null,null,0.12948,0,0,0,null,null,null,0,0,null,null,null,\"API>BFX\",null,null,{}]],null,\"SUCCESS\",\"Submitting 1 orders.\"]";
 
@@ -2849,10 +2846,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                     SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
 
                     CreateOrderFail(order);
-                    SendLogMessage("Order Fail", LogMessageType.Error);
+                   
                 }
 
-                MyOrderEvent?.Invoke(order);
+                MyOrderEvent?.Invoke(order); 
 
             }
             catch (Exception exception)
@@ -2880,6 +2877,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public void CancelAllOrders()
         {
+            rateGateCancelAllOrder.WaitToProceed();
 
             string apiPath = "v2/auth/w/order/cancel/multi";
             var body = new
@@ -2917,9 +2915,15 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    if (response != null)
+                    if (response == null) {return;}
+
+                    // Десериализация верхнего уровня в список объектов
+                    var responseJson = JsonConvert.DeserializeObject<List<object>>(response.Content);
+
+                    if(responseJson.Contains("oc_multi-req"))
                     {
-                        SendLogMessage($"Code: {response.StatusCode}", LogMessageType.Error);
+                        
+                        SendLogMessage($"All active orders canceled: {response.StatusCode}", LogMessageType.Error);
 
                     }
 
@@ -2986,6 +2990,12 @@ namespace OsEngine.Market.Servers.Bitfinex
         public void CancelOrder(Order order)
         {
             _rateGateCancelOrder.WaitToProceed();
+
+            if (OrderStateType.Cancel == order.State)
+            {
+                return;
+            }
+
             long orderId = Convert.ToInt64(order.NumberMarket); 
 
             // Формирование тела запроса с указанием ID ордера
@@ -3043,7 +3053,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var responseJson = JsonConvert.DeserializeObject<List<object>>(responseBody);
 
 
-                        if (responseJson.Contains("oc-req") || responseJson.Contains("n"))
+                        if (responseJson.Contains("oc-req"))
                         {
                             SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
                         }
@@ -3052,10 +3062,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 else
                 {
-                    CreateOrderFail(order);
+                    order.State = OrderStateType.Cancel;
+                    // CreateOrderFail(order);
                     SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, {response.ErrorMessage}", LogMessageType.Error);
                 }
-             //EVENT: oc-req
+
+                MyOrderEvent(order);////////нужно или нет?
+
+                //EVENT: oc-req
             }
             catch (Exception exception)
             {
