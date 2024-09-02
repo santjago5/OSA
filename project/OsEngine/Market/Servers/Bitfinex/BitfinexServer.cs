@@ -314,13 +314,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     newSecurity.Name = securityData.Symbol;
                     newSecurity.NameFull = securityData.Symbol;
-                    newSecurity.NameClass = "Spot";
+                   // newSecurity.NameClass = "Spot";
+                   newSecurity.NameClass = securityData.Symbol.StartsWith("f") ? "Futures" : "CurrencyPair";
                     newSecurity.NameId = Convert.ToString(securityData.Symbol);
                     newSecurity.Exchange = ServerType.Bitfinex.ToString();
 
                     newSecurity.Lot = 1;
 
-                    newSecurity.SecurityType = SecurityType.CurrencyPair;
+                    newSecurity.SecurityType =securityData.Symbol.StartsWith("f") ? SecurityType.Futures : SecurityType.CurrencyPair;
 
                     newSecurity.State = SecurityStateType.Activ;
 
@@ -871,9 +872,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
 
-
-
-
                 if (_webSocketPublic != null)
                 {
                     return;
@@ -982,7 +980,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         #endregion
 
-        //private List<MarketDepth> _depths;
+       
 
         /// <summary>
         /// Обработка входящих сообщений от вёбсокета. И что важно в данном конкретном случае, Closed и Opened методы обязательно должны находиться здесь,
@@ -1329,393 +1327,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             } 
                   MarketDepthEvent(marketDepth);
         }
-
-
-        
-
-
-
-        //    // Извлечение корневого элемента JSON
-
-        //    int channelId = root[0].GetInt32();  // CHANNEL_ID
-        //    var data = root[1];  // Данные: это может быть массив массивов (snapshot) или один массив (update)
-
-        //    // Проверка, является ли data массивом массивов (snapshot)
-        //    if (data.ValueKind == JsonValueKind.Array && data[0].ValueKind == JsonValueKind.Array)
-        //    {
-        //        // Это snapshot
-        //        var snapshot = new BitfinexBookSnapshot
-        //        {
-        //            ChannelId = channelId.ToString(),
-        //            BookEntries = new List<BitfinexBookEntry>()
-        //        };
-
-        //        // Заполнение данными snapshot
-        //        for (int i = 0; i < data.GetArrayLength(); i++)
-        //        {
-        //            var entry = data[i];
-        //            snapshot.BookEntries.Add(new BitfinexBookEntry
-        //            {
-        //                Price = entry[0].ToString(),
-        //                Count = entry[1].ToString(),
-        //                Amount = entry[2].ToString()
-        //            });
-        //        }
-
-        //    //HandleSnapshot(snapshot);
-
-        //     ProcessBitfinexOrderBook(snapshot);
-
-
-        //}
-        //    else if (data.ValueKind == JsonValueKind.Array)
-        //    {
-        //        // Это update
-        //        var update = new BitfinexBookUpdate
-        //        {
-        //            ChannelId = channelId.ToString(),
-        //            BookEntry = new BitfinexBookEntry
-        //            {
-        //                Price = data[0].ToString(),
-        //                Count = data[1].ToString(),
-        //                Amount = data[2].ToString()
-        //            }
-        //        };
-
-        //       // HandleUpdate(update);//
-        //    ProcessBitfinexOrderBookUpdate(update);
-        //    }
-        //}
-
-        //private void HandleSnapshot(BitfinexBookSnapshot snapshot)
-        //{
-        //    // Обработка данных snapshot
-        //    Console.WriteLine($"Snapshot received for channel {snapshot.ChannelId} with {snapshot.BookEntries.Count} entries.");
-
-        //    // Например, здесь можно обновить внутреннее состояние ордербука на основе данных snapshot
-        //}
-
-        //private void HandleUpdate(BitfinexBookUpdate update)
-        //{
-        //    // Обработка данных обновления
-        //    var bookEntry = update.BookEntry;
-
-        //    Console.WriteLine($"Update received for channel {update.ChannelId}: Price={bookEntry.Price}, Count={bookEntry.Count}, Amount={bookEntry.Amount}.");
-
-        //    // Например, здесь можно обновить внутреннее состояние ордербука на основе данных обновления
-        //}
-
-        //public void ProcessBitfinexOrderBook(BitfinexBookSnapshot snapshot )
-        //{
-        //    // Создаем объект для хранения данных ордербука
-        //    MarketDepth marketDepth = new MarketDepth();
-
-        //    // Инициализируем списки для ask и bid уровней
-        //    List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
-        //    List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
-
-        //    // Устанавливаем имя инструмента, которое связано с данным каналом
-        //    marketDepth.SecurityNameCode = snapshot.ChannelId;  // предполагается, что Symbol был добавлен в класс BitfinexBookSnapshot
-
-        //    // Проходимся по ask уровням и добавляем их в список
-        //    for (int i = 0; i < snapshot.BookEntries.Count; i++)
-        //    {
-        //        var entry = snapshot.BookEntries[i];
-        //        if ((entry.Amount).ToDecimal() < 0)
-        //        {
-        //            // Если Amount < 0, это ask уровень
-        //            MarketDepthLevel newMDLevel = new MarketDepthLevel
-        //            {
-        //                Ask = Math.Abs((entry.Amount).ToDecimal()), // Берем абсолютное значение для ask
-        //                Price = (entry.Price).ToDecimal()
-        //            };
-        //            asks.Add(newMDLevel);
-        //        }
-        //    }
-
-        //    // Проходимся по bid уровням и добавляем их в список
-        //    for (int i = 0; i < snapshot.BookEntries.Count; i++)
-        //    {
-        //        var entry = snapshot.BookEntries[i];
-        //        if ((entry.Amount).ToDecimal() > 0)
-        //        {
-        //            // Если Amount > 0, это bid уровень
-        //            MarketDepthLevel newMDLevel = new MarketDepthLevel
-        //            {
-        //                Bid = entry.Amount.ToDecimal(),  // Используем прямое значение для bid
-        //                Price = (entry.Price).ToDecimal()
-        //            };
-        //            bids.Add(newMDLevel);
-        //        }
-        //    }
-
-        //    // Присваиваем отсортированные списки ask и bid уровней ордербуку
-        //    marketDepth.Asks = asks;
-        //    marketDepth.Bids = bids;
-        //    marketDepth.Time = DateTime.UtcNow;  // Здесь может быть установлено текущее время или время из данных
-
-        //    //// Проверка, что оба списка не пусты
-        //    //if (marketDepth.Asks.Count == 0 || marketDepth.Bids.Count == 0)
-        //    //{
-        //    //    return;
-        //    //}
-
-        //    // Вызов события для обработки обновленного ордербука
-        //    MarketDepthEvent(marketDepth);
-        //}
-
-        //public void ProcessBitfinexOrderBookUpdate(BitfinexBookUpdate update)
-        //{
-
-        //    // Создаем объект для хранения данных ордербука
-        //    MarketDepth marketDepth = new MarketDepth();
-        //    // Устанавливаем имя инструмента, которое связано с данным каналом
-        //    marketDepth.SecurityNameCode = update.ChannelId;  // предполагается, что Symbol был добавлен в класс BitfinexBookSnapshot
-
-        //    // Инициализируем списки для ask и bid уровней
-        //    List<MarketDepthLevel> asks = new List<MarketDepthLevel>();
-        //    List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
-
-
-        //    // Обработка одного обновления(update)
-        //    var entry = update.BookEntry;
-
-        //    if (entry.Count == "0")
-        //    {
-        //        // Если количество ордеров на уровне 0, нужно удалить этот уровень
-        //        if (entry.Amount.Contains("-"))
-        //        {
-        //            depthAsks.RemoveAll(ask => ask.Price == entry.Price);
-        //        }
-        //        else
-        //        {
-        //            depthBids.RemoveAll(bid => bid.Price == entry.Price);
-        //        }
-        //    }
-
-
-        //    if ((entry.Amount).ToDecimal() < 0)
-        //    {
-        //        // Это ask уровень
-        //        MarketDepthLevel newMDLevel = new MarketDepthLevel
-        //        {
-        //            Ask = Math.Abs((entry.Amount).ToDecimal()), // Берем абсолютное значение для ask
-        //            Price = (entry.Price).ToDecimal()
-        //        };
-        //        asks.Add(newMDLevel);
-        //    }
-
-        //    else if ((entry.Amount).ToDecimal() > 0)
-        //    {
-        //        // Это bid уровень
-        //        MarketDepthLevel newMDLevel = new MarketDepthLevel
-        //        {
-        //            Bid = entry.Amount.ToDecimal(),  // Используем прямое значение для bid
-        //            Price = (entry.Price).ToDecimal()
-        //        };
-        //        bids.Add(newMDLevel);
-        //    }
-
-        //        // Присваиваем отсортированные списки ask и bid уровней ордербуку
-        //        marketDepth.Asks = asks;
-        //        marketDepth.Bids = bids;
-
-        //        marketDepth.Time = DateTime.UtcNow;  // Здесь может быть установлено текущее время или время из данных
-
-        //        //// Проверка, что оба списка не пусты
-        //        //if (marketDepth.Asks.Count == 0 || marketDepth.Bids.Count == 0)
-        //        //{
-        //        //    return;
-        //        //}
-
-        //        // Вызов события для обработки обновленного ордербука
-        //        MarketDepthEvent(marketDepth);
-
-        //}
-
-
-
-
-
-
-
-        ////    private void ProcessSnapshot(List<BitfinexBookEntry> bookEntries)
-        //    {
-        //        // Обновление внутреннего состояния стакана
-        //        depthBids.Clear(); // Очистка текущих записей о bid'ах
-        //        depthAsks.Clear(); // Очистка текущих записей о ask'ах
-
-        //        // Перебор всех записей в снимке с использованием цикла for
-        //        for (int i = 0; i < bookEntries.Count; i++)
-        //        {
-        //            var entry = bookEntries[i]; // Извлечение текущей записи
-
-        //            // Если количество больше 0, это bid
-        //            //
-        //            // if (Convert.ToDecimal(entry.Amount) > 0)
-        //            if (entry.Amount.Contains("-"))
-        //            {
-        //                // Добавление новой записи в список ask'ов
-        //                depthAsks.Add(new BitfinexBookEntry
-        //                {
-        //                    Price = entry.Price, // Преобразование цены в строку
-        //                    Count = entry.Count, // Преобразование количества в строку
-        //                    Amount = entry.Amount // Преобразование объема в строку
-        //                });
-        //            }
-        //            else // В противном случае, это bid
-        //            {
-        //                // Добавление новой записи в список bid'ов
-        //                depthBids.Add(new BitfinexBookEntry
-        //                {
-        //                    Price = entry.Price, // Преобразование цены 
-        //                    Count = entry.Count, // Преобразование количества 
-        //                    Amount = entry.Amount // Преобразование объема 
-        //                });
-        //            }
-        //        }
-
-        //        // Вызов обновления стакана
-        //        UpdateOrderBook(); // Вызов метода для обновления стакана
-        //    }
-        //    private void ProcessUpdate(BitfinexBookEntry entry)////не понятно что тут
-        //    {
-        //        // Логика обновления стакана, аналогичная приведенной выше
-        //        var bookEntry = new BitfinexBookEntry
-        //        {
-        //            Price = entry.Price.ToString(),
-        //            Count = entry.Count.ToString(),
-        //            Amount = entry.Amount.ToString()
-        //        };
-
-        //        // Обновление или удаление записи в стакане
-        //        if (Convert.ToUInt32(entry.Count) == 0)
-        //        {
-        //            // if (Convert.ToDecimal(entry.Amount )> 0)
-
-        //            if (entry.Amount.Contains("-"))
-        //            {
-        //                depthAsks.RemoveAll(ask => ask.Price == bookEntry.Price);
-        //            }
-        //            else
-        //            {
-        //                depthBids.RemoveAll(bid => bid.Price == bookEntry.Price);
-        //            }
-        //        }
-        //        else
-
-        //        {
-
-        //            // if (Convert.ToUInt32(entry.Amount )> 0)
-        //            if (entry.Amount.Contains("-"))
-        //            {
-        //                bool updated = false;
-        //                for (int i = 0; i < depthAsks.Count; i++)
-        //                {
-        //                    if (depthAsks[i].Price == bookEntry.Price)
-        //                    {
-        //                        depthAsks[i] = bookEntry;
-        //                        updated = true;
-        //                        break;
-        //                    }
-        //                }
-        //                if (!updated)
-        //                {
-        //                    depthAsks.Add(bookEntry);
-        //                }
-        //            }
-        //            else
-        //            {
-        //                bool updated = false;
-        //                for (int i = 0; i < depthBids.Count; i++)
-        //                {
-        //                    if (depthBids[i].Price == bookEntry.Price)
-        //                    {
-        //                        depthBids[i] = bookEntry;
-        //                        updated = true;
-        //                        break;
-        //                    }
-        //                }
-        //                if (!updated)
-        //                {
-        //                    depthBids.Add(bookEntry);
-        //                }
-        //            }
-        //        }
-
-        //        // Вызов обновления стакана
-        //        //UpdateOrderBook();
-        //        UpdateOrderBook( );
-        //    }
-
-        //    //   private void UpdateOrderBook()
-        //    private void UpdateOrderBook(/*string message*/)
-        //    {
-        //        // Десериализация сообщения в список объектов
-        //       // var responseDepth = JsonConvert.DeserializeObject<List<object>>(message);
-        //        // Создание нового объекта MarketDepth для обновления стакана
-
-        //        MarketDepth newMarketDepth = new MarketDepth
-        //        {
-        //            SecurityNameCode = _currentSymbol,
-        //            Time = DateTime.UtcNow,
-        //            Asks = new List<MarketDepthLevel>(),
-        //            Bids = new List<MarketDepthLevel>()
-        //        };
-
-        //        // Перебор всех bid уровней и добавление их в новый стакан
-        //        for (int i = 0; i < depthBids.Count; i++)
-        //        {
-        //            var bid = depthBids[i];
-
-        //            try
-        //            {
-        //                decimal bidPrice = Convert.ToDecimal(bid.Price, CultureInfo.InvariantCulture);
-        //                decimal bidAmount = Convert.ToDecimal(bid.Amount, CultureInfo.InvariantCulture);
-
-        //                newMarketDepth.Bids.Add(new MarketDepthLevel
-        //                {
-        //                    Price = bidPrice,
-        //                    Bid = bidAmount
-        //                });
-        //            }
-        //            catch (FormatException)
-        //            {
-        //                // Логирование или обработка ошибки при неверном формате
-        //                Console.WriteLine($"Invalid bid format: Price={bid.Price}, Amount={bid.Amount}");
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                // Логирование или обработка других исключений
-        //                Console.WriteLine($"Unexpected error: {ex.Message}");
-        //            }
-        //        }
-
-        //        // Перебор всех ask уровней и добавление их в новый стакан
-        //        for (int i = 0; i < depthAsks.Count; i++)
-        //        {
-        //            var ask = depthAsks[i];
-        //            try
-        //            {
-        //                decimal askPrice = Convert.ToDecimal(ask.Price, CultureInfo.InvariantCulture); // или просто Convert.toDecimal
-        //                decimal askAmount = Convert.ToDecimal(ask.Amount, CultureInfo.InvariantCulture); 
-
-        //                newMarketDepth.Asks.Add(new MarketDepthLevel
-        //                {
-        //                    Price = askPrice,
-        //                    // Ask = Math.Abs(askAmount)
-        //                    Ask = askAmount
-        //                });
-        //            }
-        //            catch (Exception exception)
-        //            {
-        //                SendLogMessage(exception.ToString(), LogMessageType.Error);
-        //            }
-        //        }
-
-        //        // Вызов события обновления стакана
-        //        MarketDepthEvent?.Invoke(newMarketDepth);
-        //    }
 
 
 
@@ -2084,10 +1695,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                             string messageTypeString = root[1].GetString();
 
 
-                            if (messageTypeString == "tu" || messageTypeString == "te")
+                            if (messageTypeString == "te")
                             {
                                 ProcessTradeResponse(message);
 
+                            }
+                            if (messageTypeString == "tu")
+                            {
+                                UpdateTrade(message);
                             }
                         }
 
@@ -2134,7 +1749,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                     };
 
                     // Обработка обновления трейда
-                    UpdateTrade(trade);
+                    //UpdateTrade(trade);
+                    UpdateTrade(message);
+
                 }
                 else
                 {
@@ -2262,61 +1879,113 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage($"Обработка трейда: ID = {trade.Id}, Timestamp = {trade.Timestamp}, Amount = {trade.Amount}, Price = {trade.Price}", LogMessageType.System);
             }
         }
-
-        private void UpdateTrade(BitfinexTradeUpdate tradeUpdate)
+        private void UpdateTrade(string jsonMessage)
         {
+            // Логика обновления трейда
+
             try
             {
+                // Парсим полученные данные из JSON
+                var document = JsonDocument.Parse(jsonMessage);
+                var root = document.RootElement;
 
-                // Проверка и конвертация поля Price
-                decimal price;
-                try
+                // Проверка на валидность формата сообщения
+                if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() < 2)
                 {
-                    price = decimal.Parse(tradeUpdate.Price, NumberStyles.Float, CultureInfo.InvariantCulture);
-                }
-                catch (FormatException)
-                {
-                    throw new FormatException($"Неверный формат цены: {tradeUpdate.Price}");
+                    return;
                 }
 
-                // Проверка и конвертация поля Amount
-                decimal amount;
-                try
+                // Получение ID канала и данных
+                var channelId = root[0].GetInt32();
+                var data = root[1];
+
+                // Если пришло сообщение об обновлении трейдов
+                if (data.ValueKind == JsonValueKind.Array && data.GetArrayLength() >= 4)
                 {
-                    amount = decimal.Parse(tradeUpdate.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);//Параметр NumberStyles.Float указывает, что строка может содержать числа в экспоненциальной нотации и/или использовать плавающую точку.
-                                                                                                                 //Он позволяет строке содержать символы +, -, E, e, . (точка), а также цифры.
-                                                                                                                 // Параметр CultureInfo.InvariantCulture указывает, что при преобразовании строки в число нужно использовать инвариантную культуру.Инвариантная культура основана на английском языке и используется для стандартного форматирования чисел и дат.
-                                                                                                                 //  CultureInfo.InvariantCulture гарантирует, что при анализе строки используется стандартное форматирование чисел, независимо от региональных настроек компьютера.
+                    var tradeId = data[0].GetInt64(); // ID сделки
+                    var timestamp = data[1].GetInt64(); // Временная метка сделки
+                    var amount = data[2].GetDecimal(); // Объем сделки
+                    var price = data[3].GetDecimal(); // Цена сделки
+
+                    // Создание объекта для хранения информации о сделке
+                    Trade newTrade = new Trade
+                    {
+                        SecurityNameCode = _currentSymbol,
+                        Id = tradeId.ToString(),
+                        Price = price,
+                        Volume = Math.Abs(amount), // Объем может быть отрицательным для продаж
+                        Side = amount > 0 ? Side.Buy : Side.Sell, // Определение стороны сделки
+                        Time = TimeManager.GetDateTimeFromTimeStamp(timestamp)// дата и время
+
+                    };
+
+                    
+                    ServerTime = newTrade.Time;
+
+                    NewTradesEvent?.Invoke(newTrade);
                 }
-                catch (FormatException)
-                {
-                    throw new FormatException($"Неверный формат количества: {tradeUpdate.Amount}");
-                }
-
-                // Проверка и конвертация поля Timestamp
-               
-                 long  timestamp = Convert.ToInt64(tradeUpdate.Timestamp);
-               
-
-                Trade newTrade = new Trade
-                {
-                    SecurityNameCode = _currentSymbol,
-                    Price = price,
-                    Id = tradeUpdate.Id,
-                    Time = TimeManager.GetDateTimeFromTimeStamp(timestamp),
-                    Volume = Math.Abs(amount),
-                    Side = amount > 0 ? Side.Buy : Side.Sell
-                };
-
-                ServerTime = newTrade.Time;
-
-                NewTradesEvent?.Invoke(newTrade);
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-                SendLogMessage("$\"Ошибка формата при обновлении трейда:." + exception.Message.ToString(), LogMessageType.Error);
+                SendLogMessage("Error in trade update: " + ex.Message, LogMessageType.Error);
             }
+
         }
+
+        //private void UpdateTrade(BitfinexTradeUpdate tradeUpdate)
+        //{
+        //    try
+        //    {
+
+        //        // Проверка и конвертация поля Price
+        //        decimal price;
+        //        try
+        //        {
+        //            price = decimal.Parse(tradeUpdate.Price, NumberStyles.Float, CultureInfo.InvariantCulture);
+        //        }
+        //        catch (FormatException)
+        //        {
+        //            throw new FormatException($"Неверный формат цены: {tradeUpdate.Price}");
+        //        }
+
+        //        // Проверка и конвертация поля Amount
+        //        decimal amount;
+        //        try
+        //        {
+        //            amount = decimal.Parse(tradeUpdate.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);//Параметр NumberStyles.Float указывает, что строка может содержать числа в экспоненциальной нотации и/или использовать плавающую точку.
+        //                                                                                                         //Он позволяет строке содержать символы +, -, E, e, . (точка), а также цифры.
+        //                                                                                                         // Параметр CultureInfo.InvariantCulture указывает, что при преобразовании строки в число нужно использовать инвариантную культуру.Инвариантная культура основана на английском языке и используется для стандартного форматирования чисел и дат.
+        //                                                                                                         //  CultureInfo.InvariantCulture гарантирует, что при анализе строки используется стандартное форматирование чисел, независимо от региональных настроек компьютера.
+        //        }
+        //        catch (FormatException)
+        //        {
+        //            throw new FormatException($"Неверный формат количества: {tradeUpdate.Amount}");
+        //        }
+
+        //        // Проверка и конвертация поля Timestamp
+
+        //         long  timestamp = Convert.ToInt64(tradeUpdate.Timestamp);
+
+
+        //        Trade newTrade = new Trade
+        //        {
+        //            SecurityNameCode = _currentSymbol,
+        //            Price = price,
+        //            Id = tradeUpdate.Id,
+        //            Time = TimeManager.GetDateTimeFromTimeStamp(timestamp),
+        //            Volume = Math.Abs(amount),
+        //            Side = amount > 0 ? Side.Buy : Side.Sell
+        //        };
+
+        //        ServerTime = newTrade.Time;
+
+        //        NewTradesEvent?.Invoke(newTrade);
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        SendLogMessage("$\"Ошибка формата при обновлении трейда:." + exception.Message.ToString(), LogMessageType.Error);
+        //    }
+        //}
 
 
         private void PrivateMessageReader()
@@ -2790,8 +2459,6 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-
-
                   
                       // Десериализация ответа как массив объектов
 
@@ -2805,7 +2472,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                      { 
                         return; 
                     }
-                      
+                      //
                     if (responseArray .Contains("on-req"))
                     {
                         // Извлечение нужных элементов
@@ -2829,12 +2496,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         order.State = OrderStateType.Activ;
                         order.NumberMarket = orderData.Id;  //для массива
-                        //order.NumberMarket = orderData.Cid;//для массива
-                  
-
+                       
                         //Order order = ConvertToOsEngineOrder(orderData, PortfolioName);
-
-
 
                         SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{status},{text}", LogMessageType.Trade);
 
@@ -2842,11 +2505,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
                 else
                 {
-
+                     CreateOrderFail(order);
                     SendLogMessage($"Error Status code {response.StatusCode}: {responseBody}", LogMessageType.Error);
 
-                    CreateOrderFail(order);
-                   
                 }
 
                 MyOrderEvent?.Invoke(order); 
@@ -3053,23 +2714,24 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var responseJson = JsonConvert.DeserializeObject<List<object>>(responseBody);
 
 
-                        if (responseJson.Contains("oc-req"))
-                        {
-                            SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
-                        }
+                    //if (responseJson.Contains("oc-req"))
+                    if (responseJson.Contains("CANCELED"))
+                    {
+                      SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
+                    }
                     
                 }
 
                 else
                 {
-                    order.State = OrderStateType.Cancel;
-                    // CreateOrderFail(order);
+                    //order.State = OrderStateType.Cancel;
+                    CreateOrderFail(order);
                     SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, {response.ErrorMessage}", LogMessageType.Error);
                 }
 
                 MyOrderEvent(order);////////нужно или нет?
 
-                //EVENT: oc-req
+               
             }
             catch (Exception exception)
             {
