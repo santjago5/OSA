@@ -10,22 +10,11 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
     //POST https://api.bitfinex.com/v2/auth/r/wallets
     public class BitfinexPortfolioRest
     {
-        [JsonProperty("TYPE")]
-        public string PortfolioName { get; set; }    //EXCHANGE, MARGIN, FUNDING //TYPE
-
-        [JsonProperty("CURRENCY")]
+        public string Type { get; set; }    //EXCHANGE, MARGIN, FUNDING //TYPE
         public string Currency { get; set; } //"UST", //CURRENCY
-
-        [JsonProperty("BALANCE")]
         public decimal Balance { get; set; } //19788.6529257, //BALANCE
-
-        [JsonProperty("UNSETTLED_INTEREST")]
         public decimal UnsettledInterest { get; set; } //	0, //UNSETTLED_INTEREST
-
-        [JsonProperty("AVAILABLE_BALANCE")]
         public decimal AvailableBalance { get; set; }    //19788.6529257, //AVAILABLE_BALANCE
-
-        [JsonProperty("LAST_CHANGE")]
         public string LastChange { get; set; }//"Exchange 2.0 UST for USD @ 11.696", 
 
     }

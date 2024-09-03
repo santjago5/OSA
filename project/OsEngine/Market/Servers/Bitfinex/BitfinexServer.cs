@@ -309,19 +309,21 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     var securityData = security[i];
 
-
                     Security newSecurity = new Security();
 
                     newSecurity.Name = securityData.Symbol;
+
                     newSecurity.NameFull = securityData.Symbol;
-                   // newSecurity.NameClass = "Spot";
-                   newSecurity.NameClass = securityData.Symbol.StartsWith("f") ? "Futures" : "CurrencyPair";
+            
+                    newSecurity.NameClass = securityData.Symbol.StartsWith("f") ? "Futures" : "CurrencyPair";
+
                     newSecurity.NameId = Convert.ToString(securityData.Symbol);
+
                     newSecurity.Exchange = ServerType.Bitfinex.ToString();
 
                     newSecurity.Lot = 1;
 
-                    newSecurity.SecurityType =securityData.Symbol.StartsWith("f") ? SecurityType.Futures : SecurityType.CurrencyPair;
+                    newSecurity.SecurityType = securityData.Symbol.StartsWith("f") ? SecurityType.Futures : SecurityType.CurrencyPair;
 
                     newSecurity.State = SecurityStateType.Activ;
 
@@ -337,13 +339,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     _securities.Add(newSecurity);////////////////////////;
 
-
-
-
                     SecurityEvent(_securities);
                 }
-
-
             }
             catch (Exception exception)
             {
@@ -426,7 +423,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     {
                         string jsonResponse = response.Content;
 
-
+                        //"[[\"exchange\",\"TRX\",34.780002,0,34.780002,\"Trading fees for 22.0 TRX (TRXUSD) @ 0.1564 on BFX (0.2%)\",null],[\"exchange\",\"USD\",5.78503574,0,5.78503574,\"Exchange 22.0 TRX for USD @ 0.15644\",{\"reason\":\"TRADE\",\"order_id\":171007965952,\"order_id_oppo\":171011721474,\"trade_price\":\"0.15644\",\"trade_amount\":\"22.0\",\"order_cid\":1725249812080,\"order_gid\":null}]]"
                         List<List<object>> walletList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
 
                         if (walletList == null)
@@ -444,7 +441,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                             BitfinexPortfolioRest wallet = new BitfinexPortfolioRest
                             {
-                                PortfolioName = walletData[0]?.ToString(),
+                                Type = walletData[0]?.ToString(),
                                 Currency = walletData[1]?.ToString(),
                                 Balance = (walletData[2]).ToString().ToDecimal(),////??????????????????
                                 UnsettledInterest = (walletData[3]).ToString().ToDecimal(),
@@ -455,7 +452,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                             };
                             wallets.Add(wallet);
                         }
-                        UpdatePortfolio(wallets);
+
+                        UpdatePortfolio(jsonResponse,wallets);////////lj,fdbkf
+                        
 
                     }
                     else
@@ -475,15 +474,20 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        private void UpdatePortfolio(List<BitfinexPortfolioRest> assets)
+        // private void UpdatePortfolio(List<BitfinexPortfolioRest> assets)
+        private void UpdatePortfolio(string json, List<BitfinexPortfolioRest> assets)
         {
             try
             {
+                //BitfinexPortfolioRest response = JsonConvert.DeserializeObject<BitfinexPortfolioRest>(json);
+                
                 Portfolio portfolio = new Portfolio
                 {
                     Number = "Bitfinex",
                     ValueBegin = 1,
                     ValueCurrent = 1
+                    // ValueBegin = assets[0].Currency == "USD" ? assets[0].Balance : 0,
+                    //  ValueCurrent = assets[0].Currency == "USD" ? assets[0].AvailableBalance : 0,
                 };
 
 
@@ -502,7 +506,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         PositionOnBoard position = new PositionOnBoard
                         {
-                            PortfolioName = assets[i].PortfolioName,
+                            PortfolioName = assets[i].Type,
                             ValueBegin = availableBalance,
                             ValueCurrent = availableBalance,
                             ValueBlocked = unsettledInterest,
@@ -517,6 +521,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         SendLogMessage($"Failed to parse balance or interest for asset {assets[i].Currency}", LogMessageType.Error);
                     }
                 }
+
                 PortfolioEvent?.Invoke(new List<Portfolio> { portfolio });
 
             }
@@ -525,15 +530,20 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage($"{exception.Message} {exception.StackTrace}", LogMessageType.Error);
             }
         }
-        //public void GetPortfolios()
+
+        //public void GetPortfolios(string _portfolioType)
         //{
         //    if (string.IsNullOrEmpty(_portfolioType) == false)
         //    {
-        //        GetCurrentPortfolio(_portfolioType, "SPOT");
+        //     _portfolioType == "SPOT" ? GetCurrentPortfolio(_portfolioType, "SPOT") : GetCurrentPortfolio(_portfolioType, "FUTURES");
         //    }
-
-        //    ActivatePortfolioSocket();
+         
         //}
+
+        private void GetCurrentPortfolio(string portfolioType, string v)
+        {
+            throw new NotImplementedException();
+        }
 
 
         #endregion
@@ -2146,12 +2156,9 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     Time = TimeManager.GetDateTimeFromTimeStamp(time),
                     SecurityNameCode = response.Symbol,
-                    // NumberOrderParent = response.OrderId,
                     NumberOrderParent = response.Cid,//что тут должно быть
                     Price = (response.OrderPrice).ToDecimal(),
-                    NumberTrade = response.OrderId,//что тут должно быть
-                    //NumberTrade = response.Id,
-                    //NumberPosition = response.Id,
+                    NumberTrade = response.OrderId,//что тут должно быт
                     Side = response.Amount.Contains("-") ? Side.Sell : Side.Buy,
                     // Side = response.Amount > 0 ? Side.Buy : Side.Sell;
                    // Volume = (response.Amount).ToString().ToDecimal(),
