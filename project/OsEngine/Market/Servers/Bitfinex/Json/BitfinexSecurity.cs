@@ -61,29 +61,3 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 
 }
 
-
-
-
-
-
-//// Include namespace for Newtonsoft.Json NuGet package
-//using Newtonsoft.Json;
-
-//// JSON data
-//string jsonData = "{\"name\":\"John Doe\",\"age\":30,\"city\":\"New York\"}";
-
-//// C# class
-//public class Person
-//{
-//    public string Name { get; set; }
-//    public int Age { get; set; }
-//    public string City { get; set; }
-//}
-
-//// Deserialize JSON data into C# object
-//Person person = JsonConvert.DeserializeObject<Person>(jsonData);
-
-//var customer = JsonSerializer.Deserialize<BitfinexSecurity>(content);
-
-
-
