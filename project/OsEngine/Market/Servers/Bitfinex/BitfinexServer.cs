@@ -286,6 +286,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     SecurityEvent?.Invoke(_securities);
                 }
+
+
             }
             catch (Exception exception)
             {
@@ -582,7 +584,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 List<Candle> rangeCandles; //= new List<Candle>(); //////не нужен новый список 
 
-                rangeCandles = CreateQueryCandles(nameSec, GetStringInterval(tf)/*, fromTime, endTime*/);
+                rangeCandles = CreateQueryCandles(nameSec, GetStringInterval(tf), fromTime, endTime);
 
                 if (rangeCandles == null)
                     return null; // нет данных
@@ -610,15 +612,19 @@ namespace OsEngine.Market.Servers.Bitfinex
         public List<Candle> GetCandleDataToSecurity(Security security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)/////string
         {
 
-            if (startTime != actualTime)
+            //if (startTime != actualTime)
+            //{
+            //    startTime = actualTime;
+            //}
+            if(actualTime < startTime)
             {
                 startTime = actualTime;
             }
 
-            if (actualTime > endTime)
-            {
-                return null;
-            }
+            //if (actualTime > endTime)
+            //{
+            //    return null;
+            //}
 
             if (startTime > endTime)
             {
@@ -657,7 +663,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         private string GetStringInterval(TimeSpan tf)
         {
             // Type of candlestick patterns: 1min, 3min, 5min, 15min, 30min, 1hour, 3hour, 6hour,  12hour, 1day, 1week, 14 days,1 month
-            // return tf.Minutes != 0 ? $"{tf.Minutes}min" : $"{tf.Hours}hour";
+            // return tf.Minutes != 0 ? $"{tf.Minutes}m" : $"{tf.Hours}h";
             if (tf.Minutes != 0)
             {
                 return $"{tf.Minutes}m";
@@ -672,24 +678,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
        // private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)//////////TimeSpan interval
 
-        private List<Candle> CreateQueryCandles(string nameSec, string tf/*, string startTime , string endTime*/)
+        private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)
         {
-
-
-            //string exchangeType =  BitfinexExchangeType.SpotExchange.ToString();
-            //if (nameSec.StartsWith("t"))
-            //{
-            //    exchangeType = BitfinexExchangeType.SpotExchange.ToString();
-            //}
-            //if (nameSec.StartsWith("f"))
-            //{
-            //    exchangeType = BitfinexExchangeType.FuturesExchange.ToString();
-            //}
-            //else
-            //{
-            //    exchangeType = BitfinexExchangeType.MarginExchange.ToString();
-            //}
-
 
 
             _rateGateCandleHistory.WaitToProceed(100);
@@ -707,8 +697,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             //string endTime = Convert.ToInt64(endTimeMilliseconds).ToString();
 
 
-            //string startTime = Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
-            //string endTime = Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
+            string startTime = Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
+            string endTime = Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
 
 
 
@@ -720,24 +710,21 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             ////var request = new RestRequest("");
             ///
-            // string section = timeFrom !=DateTime.Today ?"hist":"last";////////////
-            // string section = startTime != DateTime.Today ? "hist" : "last";
+            //string section = timeFrom !=DateTime.Today ?"hist":"last";////////////
 
-            //DateTime parsedTimeFrom;
+            //string section = startTime != DateTime.Today ? "hist" : "last";
 
-            //if (DateTime.TryParse(startTime, out parsedTimeFrom))
-            //{
-            //    string section = parsedTimeFrom.Date != DateTime.Today ? "hist" : "last";
-            //}
+           
 
             //string candle = $"trade:30m:{nameSec}";
 
             string candle = $"trade:{tf}:{nameSec}";
 
-            string _baseUrl = "https://api-pub.bitfinex.com/v2";
-            string apiPath =$"/candles/{candle}/last";//?start={startTime}&end={endTime}";
+        
+            string apiPath =$"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
+
             // // Создаем клиента RestSharp
-            var client = new RestClient(_baseUrl);
+            var client = new RestClient(_getUrl);
 
             // Создаем запрос типа POST
             var request = new RestRequest(apiPath, Method.GET);
@@ -751,17 +738,15 @@ namespace OsEngine.Market.Servers.Bitfinex
                 // Отправляем запрос и получаем ответ
                 IRestResponse response = client.Execute(request);
 
-               
-
-
                 if (response.StatusCode == HttpStatusCode.OK)
-                { 
+                {
                     // Выводим тело ответа
                     string jsonResponse = response.Content;
 
                     // List<List<BitfinexCandle>> candles = JsonConvert.DeserializeObject<List<List<BitfinexCandle>>>(jsonResponse);//////////////////////////////
-                    List<List<object>> candles = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
+                    //List<object> candles = JsonConvert.DeserializeObject<List<object>>(jsonResponse);
 
+                    List<List<object>> candles = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
 
                     if (candles == null || candles.Count == 0)
                     {
@@ -771,54 +756,71 @@ namespace OsEngine.Market.Servers.Bitfinex
                     List<BitfinexCandle> candleList = new List<BitfinexCandle>();
 
                     for (int i = 0; i < candles.Count; i++) ////////////////////////
-                    //for (int i = 0; i < 2; i++)
+                                                            //for (int i = 0; i < 2; i++)
                     {
-                        var candleData = candles[i];
+                        var candleData = candles[i];// Получаем данные по текущей свече.
 
-                        if (candleData[0] == null ||
-                            candleData[1] == null ||
-                            candleData[2] == null ||
-                            candleData[3] == null ||
-                            candleData[4] == null ||
-                            candleData[5] == null)
+                        // var candleData = (List<object>)candles[i];
+
+                        if (candles[i] == null || candles.Count < 6)
+                        {
+                            SendLogMessage("Candle data is incomplete", LogMessageType.Error);
+                            continue;
+                        }
+
+                        if (candleData == null)
+                        //if (candleData[0] == null || candleData[1] == null ||
+                        //    candleData[2] == null ||  candleData[3] == null ||
+                        //    candleData[4] == null || candleData[5] == null)
+
                         {
                             SendLogMessage("Candle data contains null values", LogMessageType.Error);
 
                             continue;
                         }
-                        // .ToString().ToDecimal()
-                        if (Convert.ToDecimal(candleData[1]) == 0 ||
-                            Convert.ToDecimal(candleData[2]) == 0 ||
-                            Convert.ToDecimal(candleData[3]) == 0 ||
-                            Convert.ToDecimal(candleData[4]) == 0 ||
-                            Convert.ToDecimal(candleData[5]) == 0)
-                        {
-                            SendLogMessage("Candle data contains zero values", LogMessageType.Error);
+                        //// .ToString().ToDecimal()
+                        //if (Convert.ToDecimal(candleData[1]) == 0 ||
+                        //    Convert.ToDecimal(candleData[2]) == 0 ||
+                        //    Convert.ToDecimal(candleData[3]) == 0 ||
+                        //    Convert.ToDecimal(candleData[4]) == 0 ||
+                        //    Convert.ToDecimal(candleData[5]) == 0)
+                        //{
+                        //    SendLogMessage("Candle data contains zero values", LogMessageType.Error);
 
-                            continue;
-                        }
+                        //    continue;
+                        //}
 
-
+                        // Создание объекта класса BitfinexCandle и присвоение значений полям
 
                         BitfinexCandle newCandle = new BitfinexCandle
 
                         {
-                            Time = candleData[0].ToString(),
+                            Mts = candleData[0].ToString(),
                             Open = candleData[1].ToString(),
                             Close = candleData[2].ToString(),
                             High = candleData[3].ToString(),
                             Low = candleData[4].ToString(),
                             Volume = candleData[5].ToString()
+
+
+                            //// Преобразование данных в нужные типы
+                            //Mts = (candleData[0]),
+                            //Open = Convert.ToDecimal(candleData[1]).ToString(),
+                            //Close = Convert.ToDecimal(candleData[2]).ToString(),
+                            //High = Convert.ToDecimal(candleData[3]).ToString(),
+                            //Low = Convert.ToDecimal(candleData[4]).ToString(),
+                            //Volume = Convert.ToDecimal(candleData[5]).ToString()
+
                         };
 
-                        candleList.Add(newCandle);
+
+                        candleList.Add(newCandle); // Добавляем объект свечи в список.
                     }
 
-
-                    return ConvertToCandles(candleList);
+                    return ConvertToCandles(candleList); // Преобразуем список BitfinexCandle в список Candle.
                 }
-            }
 
+            }
             catch
             {
                 { SendLogMessage("Http request error", LogMessageType.Error); }/////////
@@ -832,16 +834,18 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private List<Candle> ConvertToCandles(List<BitfinexCandle> candleList)
         {
-            List<Candle> candles = new List<Candle>();
+            List<Candle> candles = new List<Candle>();// Список для хранения окончательных свечей.
+
             try
             {
                 for (int i = 0; i < candleList.Count; i++)
                 {
-                    var candle = candleList[i];
+                    var candle = candleList[i];// Получаем текущую свечу из списка.
+
                     try
                     {
 
-                        if (string.IsNullOrEmpty(candle.Time) || string.IsNullOrEmpty(candle.Open) ||
+                        if (string.IsNullOrEmpty(candle.Mts) || string.IsNullOrEmpty(candle.Open) ||
                             string.IsNullOrEmpty(candle.Close) || string.IsNullOrEmpty(candle.High) ||
                             string.IsNullOrEmpty(candle.Low) || string.IsNullOrEmpty(candle.Volume))
                         {
@@ -858,7 +862,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         Candle newCandle = new Candle
                         {
                             State = CandleState.Finished,
-                            TimeStart = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(candle.Time)),
+                            TimeStart = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(candle.Mts)),
                             Open = (candle.Open).ToString().ToDecimal(),
                             Close = (candle.Close).ToString().ToDecimal(),
                             High = (candle.High).ToString().ToDecimal(),
@@ -875,8 +879,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                         SendLogMessage($"Format exception: {ex.Message}", LogMessageType.Error);
                     }
                 }
-                //  candles.Reverse();
-                return candles;
+                // candles.Reverse();//////
+                return candles;// Возвращаем окончательный список свечей.
             }
             catch (Exception exception)
             {
@@ -1823,85 +1827,19 @@ namespace OsEngine.Market.Servers.Bitfinex
         }
 
 
-        //private void ProcessTradeResponse(string message)
-        //{
-
-        //    // Десериализация JSON-ответа в JsonDocument
-        //    var jsonDocument = JsonDocument.Parse(message);
-        //    var root = jsonDocument.RootElement;
-
-        //    // Извлечение Channel ID и MSG_TYPE
-        //    int channelId = root[0].GetInt32(); // CHANNEL_ID
-        //    string msgType = root[1].GetString(); // MSG_TYPE
-
-        //    // Проверка типа сообщения (msgType должно быть "te" для обновления трейдов)
-        //    if (msgType == "te" || msgType == "tu")
-        //    {
-        //        // Извлечение данных трейда
-        //        string tradeDataJson = root[2].GetRawText();
-
-        //        // Десериализация данных трейда как списка объектов
-        //        var tradeList = JsonConvert.DeserializeObject<List<object>>(tradeDataJson);
-
-
-
-        //        // Создание объекта BitfinexTradeUpdate из списка
-        //        var trade = new BitfinexTradeUpdate
-        //        {
-        //            Id = tradeList[0].ToString(),
-        //            Timestamp = tradeList[1].ToString(),
-        //            Amount = tradeList[2].ToString(),
-        //            Price = tradeList[3].ToString()
-        //        };
-
-        //        // Обработка обновления трейда
-        //        UpdateTrade(trade);
-        //    }
-
-
-        //     else if (root[1].ValueKind == JsonValueKind.Array)
-        //    {
-        //        // Это снимок (snapshot)
-        //        var tradeArray = root[1].EnumerateArray();
-
-        //        // Перебор всех записей в снимке
-        //        var tradeList = new List<BitfinexTradeUpdate>();
-        //        foreach (var tradeElement in tradeArray)
-        //        {
-        //            // Десериализация данных трейда как списка объектов
-        //            var trade = new BitfinexTradeUpdate
-        //            {
-        //                Id = tradeElement[0].ToString(),
-        //                Timestamp = tradeElement[1].ToString(),
-        //                Amount = tradeElement[2].ToString(),
-        //                Price = tradeElement[3].ToString()
-        //            };
-
-        //            tradeList.Add(trade);
-        //        }
-
-        //        // Обработка снимка
-        //        ProcessSnapshot(tradeList);
-        //    }
-        //    else
-        //    {
-        //        SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
-        //    }
-        //}
-
-        private void ProcessSnapshot(List<BitfinexTradeUpdate> tradeList)
+        private void ProcessSnapshot(List<BitfinexTradeUpdate> tradeList)////////
         {
-
+            //////дописать логику обработки снимков трейдов
             // Логика обработки снимка трейдов
             for (int i = 0; i < tradeList.Count; i++)
             {
                 // Извлечение текущего трейда из списка
                 var trade = tradeList[i];
 
-                //trade.Amount = tradeList[i].Amount;
-                //trade.Price = tradeList[i].Price;
-                //trade.Timestamp = tradeList[i]. Timestamp;
-                //trade.Id = tradeList[i].Id;
+                trade.Amount = tradeList[i].Amount;
+                trade.Price = tradeList[i].Price;
+                trade.Timestamp = tradeList[i].Timestamp;
+                trade.Id = tradeList[i].Id;
                 // Пример обработки каждого трейда в снимке
                 SendLogMessage($"Обработка трейда: ID = {trade.Id}, Timestamp = {trade.Timestamp}, Amount = {trade.Amount}, Price = {trade.Price}", LogMessageType.System);
             }
@@ -2188,8 +2126,11 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 myTrade.Volume = GetVolumeForMyTrade(response.Symbol, preVolume);
 
-
+      
                 MyTradeEvent?.Invoke(myTrade);
+
+                SendLogMessage(myTrade.ToString(), LogMessageType.Trade);////надо или нет
+                
             }
             catch (Exception exception)
             {
@@ -2608,7 +2549,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     if (responseJson.Contains("oc_multi-req"))
                     {
 
-                        SendLogMessage($"All active orders canceled: {response.StatusCode}", LogMessageType.Error);
+                        SendLogMessage($"All active orders canceled: {response.StatusCode}",LogMessageType.Trade );//LogMessageType.Error
 
                     }
 
@@ -2808,7 +2749,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     order.Price = newPrice;
 
                     SendLogMessage("Order change price. New price: " + newPrice
-                      + "  " + order.SecurityNameCode, LogMessageType.System);
+                      + "  " + order.SecurityNameCode,LogMessageType. Trade );//LogMessageType.System
 
                 }
                 else
@@ -3157,6 +3098,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                             allOrders.Add(newOrder);
 
                             MyOrderEvent?.Invoke(allOrders[i]);
+                           
                         }
 
                     }
@@ -3166,6 +3108,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
                 else
                 {
+                   
                     SendLogMessage($" Can't get all orders. Http State Code: {response.Content}", LogMessageType.Error);
                 }
 

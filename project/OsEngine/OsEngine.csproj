@@ -577,7 +577,7 @@
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\NewOrderPayload.cs" />
     <Compile Include="Market\Servers\Bitfinex\BitfitnexEntity\SubscriptionInformation.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexBook.cs" />
-    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexCandlesHistory.cs" />
+    <Compile Include="Market\Servers\Bitfinex\Json\BitfinexCandle.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexMarketDepthMessage.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexMyTrade.cs" />
     <Compile Include="Market\Servers\Bitfinex\Json\BitfinexOrder.cs" />
