@@ -12,10 +12,6 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 {
 
 
-
-
-
-
     public class BitfinexSecurity
     {
         // GET https://api-pub.bitfinex.com/v2/tickers?symbols=ALL

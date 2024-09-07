@@ -148,7 +148,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 _securities.Clear();
                 _portfolios.Clear();/////////
-              
+
                 DeleteWebSocketConnection();
             }
             catch (Exception exception)
@@ -298,17 +298,11 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void UpdateSecurity(List<BitfinexSecurity> security)
         {
-          // если на обновление приходит json
+            // если на обновление приходит json
             //ResponseMessageSecurities.Result item = response.result[i];
 
-            //if (item.is_active == "true")
-            //{
-            //    if (GetSecurityType(item.kind) == SecurityType.None)
-            //    {
-            //        continue;
-            //    }
 
-                try
+            try
             {
                 if (security == null || security.Count == 0)
                 {
@@ -320,43 +314,31 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var securityData = security[i];
 
                     Security newSecurity = new Security();
-            
                     newSecurity.Exchange = ServerType.Bitfinex.ToString();
-
                     newSecurity.Name = securityData.Symbol;
-
                     newSecurity.NameFull = securityData.Symbol;
-
                     newSecurity.NameClass = securityData.Symbol.StartsWith("f") ? "Futures" : "CurrencyPair";
-
                     newSecurity.NameId = Convert.ToString(securityData.Symbol);
-
-                    //newSecurity.Lot = 1;
-
+                    newSecurity.Lot = 1;
                     newSecurity.SecurityType = securityData.Symbol.StartsWith("f") ? SecurityType.Futures : SecurityType.CurrencyPair;
-
                     newSecurity.State = SecurityStateType.Activ;
-
                     newSecurity.PriceStep = newSecurity.Decimals.GetValueByDecimals();
-
                     newSecurity.PriceStepCost = newSecurity.PriceStep;
-
-                    //newSecurity.Decimals = Convert.ToInt32(securityData.LastPrice);////////////////
-
-
-                    // newSecurity.DecimalsVolume = newSecurity.Decimals;
+                    newSecurity.DecimalsVolume = newSecurity.Decimals;
 
 
                     _securities.Add(newSecurity);////////////////////////;
 
                 }
+
+                SecurityEvent?.Invoke(_securities);
+
             }
             catch (Exception exception)
             {
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
 
-            SecurityEvent?.Invoke(_securities);
         }
 
         private SecurityType GetSecurityType(string type)
@@ -468,7 +450,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     }
                     else
                     {
-                        Console.WriteLine($"Error Status code {response.StatusCode}: {response.Content}");
+                        SendLogMessage("Securities request exception. Status: " + response.StatusCode, LogMessageType.Error);
                     }
 
                 }
@@ -483,8 +465,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        // private void UpdatePortfolio(List<BitfinexPortfolioRest> assets)
-        private void UpdatePortfolio(string json, List<BitfinexPortfolioRest> assets)
+        // private void UpdatePortfolio(List<BitfinexPortfolioRest> portfolios)
+        private void UpdatePortfolio(string json, List<BitfinexPortfolioRest> portfolios)
         {
             try
             {
@@ -495,31 +477,31 @@ namespace OsEngine.Market.Servers.Bitfinex
                     Number = "Bitfinex",
                     ValueBegin = 1,
                     ValueCurrent = 1
-                    // ValueBegin = assets[0].Currency == "USD" ? assets[0].Balance : 0,
-                    //  ValueCurrent = assets[0].Currency == "USD" ? assets[0].AvailableBalance : 0,
+                    // ValueBegin = portfolios[0].Currency == "USD" ? portfolios[0].Balance : 0,
+                    //  ValueCurrent = portfolios[0].Currency == "USD" ? portfolios[0].AvailableBalance : 0,
                 };
 
 
-                if (assets == null || assets.Count == 0)
+                if (portfolios == null || portfolios.Count == 0)
                 {
                     return;
                 }
 
 
-                for (int i = 0; i < assets.Count; i++)
+                for (int i = 0; i < portfolios.Count; i++)
                 {
-                    if (decimal.TryParse(assets[i].AvailableBalance.ToString(), out decimal availableBalance) &&
-                        decimal.TryParse(assets[i].UnsettledInterest.ToString(), out decimal unsettledInterest))
+                    if (decimal.TryParse(portfolios[i].AvailableBalance.ToString(), out decimal availableBalance) &&
+                        decimal.TryParse(portfolios[i].UnsettledInterest.ToString(), out decimal unsettledInterest))
                     {
 
 
                         PositionOnBoard position = new PositionOnBoard
                         {
-                            PortfolioName = assets[i].Type,
+                            PortfolioName = portfolios[i].Type,
                             ValueBegin = availableBalance,
                             ValueCurrent = availableBalance,
                             ValueBlocked = unsettledInterest,
-                            SecurityNameCode = assets[i].Currency
+                            SecurityNameCode = portfolios[i].Currency
                         };
 
 
@@ -527,7 +509,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     }
                     else
                     {
-                        SendLogMessage($"Failed to parse balance or interest for asset {assets[i].Currency}", LogMessageType.Error);
+                        SendLogMessage($"Failed to parse balance or interest for portfolio {portfolios[i].Currency}", LogMessageType.Error);
                     }
                 }
 
@@ -536,7 +518,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
             catch (Exception exception)
             {
-                SendLogMessage($"{exception.Message} {exception.StackTrace}", LogMessageType.Error);
+                SendLogMessage($"{exception.Message}", LogMessageType.Error);
             }
         }
 
@@ -616,7 +598,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             //{
             //    startTime = actualTime;
             //}
-            if(actualTime < startTime)
+            if (actualTime < startTime)
             {
                 startTime = actualTime;
             }
@@ -676,7 +658,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-       // private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)//////////TimeSpan interval
+        // private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)//////////TimeSpan interval
 
         private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)
         {
@@ -714,14 +696,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             //string section = startTime != DateTime.Today ? "hist" : "last";
 
-           
+
 
             //string candle = $"trade:30m:{nameSec}";
 
             string candle = $"trade:{tf}:{nameSec}";
 
-        
-            string apiPath =$"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
+
+            string apiPath = $"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
 
             // // Создаем клиента RestSharp
             var client = new RestClient(_getUrl);
@@ -825,10 +807,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 { SendLogMessage("Http request error", LogMessageType.Error); }/////////
             }
-            //else
-            //{
-            //    SendLogMessage($"Http State Code: {response.StatusCode}", LogMessageType.Error);
-            //}
+            // Возвращаем пустой список в случае ошибки.
             return null;
         }
 
@@ -853,11 +832,13 @@ namespace OsEngine.Market.Servers.Bitfinex
                             continue;
                         }
 
-                        //if (Convert.ToDecimal(candle.Open) == 0 || Convert.ToDecimal(candle.Close) == 0 || Convert.ToDecimal(candle.High) == 0 || Convert.ToDecimal(candle.Low) == 0 || Convert.ToDecimal(candle.Volume) == 0)
-                        //{
-                        //    SendLogMessage("Candle data contains zero values", LogMessageType.Error);
-                        //    continue;
-                        //}
+                        if (Convert.ToDecimal(candle.Open) == 0 || Convert.ToDecimal(candle.Close) == 0 ||
+                            Convert.ToDecimal(candle.High) == 0 || Convert.ToDecimal(candle.Low) == 0 ||
+                            Convert.ToDecimal(candle.Volume) == 0)
+                        {
+                            SendLogMessage("Candle data contains zero values", LogMessageType.Error);
+                            continue;
+                        }
 
                         Candle newCandle = new Candle
                         {
@@ -869,14 +850,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                             Low = (candle.Low).ToString().ToDecimal(),
                             Volume = (candle.Volume).ToString().ToDecimal()
 
-                          
+
                         };
 
                         candles.Add(newCandle);
                     }
-                    catch (FormatException ex)
+                    catch (FormatException exception)
                     {
-                        SendLogMessage($"Format exception: {ex.Message}", LogMessageType.Error);
+                        SendLogMessage($"Format exception: {exception.Message}", LogMessageType.Error);
                     }
                 }
                 // candles.Reverse();//////
@@ -2011,10 +1992,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                         UpdateMyTrade(message);
                         continue;
                     }
-                    //if (message.Contains("wu"))
-                    //{
-                    //    UpdatePortfolio(message);
-                    //}
+                    if (message.Contains("wu"))
+                    {
+                        UpdatePortfolio(message);
+                    }
 
                     //if(message.Contains("CHAN_ID = 0") && message.Contains("ou"))
                     //{
@@ -2126,11 +2107,11 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 myTrade.Volume = GetVolumeForMyTrade(response.Symbol, preVolume);
 
-      
+
                 MyTradeEvent?.Invoke(myTrade);
 
                 SendLogMessage(myTrade.ToString(), LogMessageType.Trade);////надо или нет
-                
+
             }
             catch (Exception exception)
             {
@@ -2549,7 +2530,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     if (responseJson.Contains("oc_multi-req"))
                     {
 
-                        SendLogMessage($"All active orders canceled: {response.StatusCode}",LogMessageType.Trade );//LogMessageType.Error
+                        SendLogMessage($"All active orders canceled: {response.StatusCode}", LogMessageType.Trade);//LogMessageType.Error
 
                     }
 
@@ -2563,7 +2544,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
-           
+
         }
 
 
@@ -2749,7 +2730,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     order.Price = newPrice;
 
                     SendLogMessage("Order change price. New price: " + newPrice
-                      + "  " + order.SecurityNameCode,LogMessageType. Trade );//LogMessageType.System
+                      + "  " + order.SecurityNameCode, LogMessageType.Trade);//LogMessageType.System
 
                 }
                 else
@@ -3028,7 +3009,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
         // public void GetAllActivOrders()////////////////////111111111
-       public void GetAllActivOrders()
+        public void GetAllActivOrders()
         {
             // post https://api.bitfinex.com/v2/auth/r/orders
 
@@ -3071,7 +3052,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     // var orders = JsonConvert.DeserializeObject<List<BitfinexOrderData>>(responseBody);
                     var orders = JsonConvert.DeserializeObject<List<List<object>>>(response.Content);
                     //  доступ к первому элементу
-                    
+
 
                     var activeOrders = new List<BitfinexOrderData>();
 
@@ -3085,10 +3066,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                             newOrder.TimeCreate = TimeManager.GetDateTimeFromTimeStamp(long.Parse(activeOrders[i].MtsCreate));
                             newOrder.ServerType = ServerType.Bitfinex;
                             newOrder.SecurityNameCode = activeOrders[i].Symbol;
-                         
+
                             newOrder.NumberUser = Convert.ToInt32(activeOrders[i].Cid);/////
-                         
-                            newOrder.NumberMarket =activeOrders[i].Id;
+
+                            newOrder.NumberMarket = activeOrders[i].Id;
                             newOrder.Side = activeOrders[i].Amount.Equals("-") ? Side.Sell : Side.Buy;
                             newOrder.State = GetOrderState(activeOrders[i].Status);
                             newOrder.Volume = activeOrders[i].Amount.ToDecimal();
@@ -3098,7 +3079,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                             allOrders.Add(newOrder);
 
                             MyOrderEvent?.Invoke(allOrders[i]);
-                           
+
                         }
 
                     }
@@ -3108,7 +3089,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
                 else
                 {
-                   
+
                     SendLogMessage($" Can't get all orders. Http State Code: {response.Content}", LogMessageType.Error);
                 }
 
@@ -3118,7 +3099,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
 
-         //   return allOrders;
+            //   return allOrders;
 
         }
 
