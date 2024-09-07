@@ -10,33 +10,15 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 {
     public class BitfinexPortfolioSocket
     {
-        [JsonProperty("CHAN_ID")]
-        public string chanId { get;set;}
-        
-        [JsonProperty("TYPE")]
-        public string  type {get;set;}
-        
-        [JsonProperty("WALLET_TYPE")]
-        public string walletType{ get; set; }
-
-        [JsonProperty("CURRENCY")]
-        public string currency { get; set; }
-
-        [JsonProperty("BALANCE")]
-        public string balance { get; set; }
-
-        [JsonProperty("UNSETTLED_INTEREST")]
-        public string unsettled_interest{ get; set; }
-
-        [JsonProperty("BALANCE_AVAILABLE")]
-
-        public string balanceAvailable{get; set; }
- 
-        [JsonProperty("DESCRIPTION")]
-        public string description { get; set; }
-
-        [JsonProperty("META")]
-        public string meta{ get; set; }
+        public string ChanId { get;set;}
+        public string  Type {get;set;}
+        public string WalletType{ get; set; }
+        public string Currency { get; set; }
+        public string Balance { get; set; }
+        public string Unsettled_interest{ get; set; }
+        public string BalanceAvailable{get; set; }
+        public string Description { get; set; }
+        public string Meta{ get; set; }
 
 
 

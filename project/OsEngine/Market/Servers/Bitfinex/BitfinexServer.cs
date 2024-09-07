@@ -38,6 +38,8 @@ using WebSocketSharp;
 using OsEngine.Market.Servers.BitStamp.BitStampEntity;
 using System.Net.WebSockets;
 using Com.Lmax.Api.Internal;
+using OsEngine.Market.Servers.Transaq.TransaqEntity;
+using OsEngine.Market.Servers.BitMax;
 
 
 
@@ -392,17 +394,16 @@ namespace OsEngine.Market.Servers.Bitfinex
                 string signature = $"/api/{apiPath}{nonce}";
 
                 string sig = ComputeHmacSha384(_secretKey, signature);
-                string body = "";
-                var client = new RestClient("https://api.bitfinex.com/v2/auth/r/wallets");
+                
+                
+                 var client = new RestClient(_postUrl);
 
-                var request = new RestRequest("", Method.POST);
+                var request = new RestRequest(apiPath, Method.POST);
+
+                request.AddHeader("accept", "application/json");
                 request.AddHeader("bfx-nonce", nonce);
                 request.AddHeader("bfx-apikey", _publicKey);
                 request.AddHeader("bfx-signature", sig);
-
-                request.AddJsonBody(body);
-
-                request.AddParameter("accept", "application/json");
 
                 try
                 {
@@ -444,7 +445,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                             wallets.Add(wallet);
                         }
 
-                        UpdatePortfolio(jsonResponse, wallets);////////lj,fdbkf
+                       //UpdatePortfolio(jsonResponse, wallets);////////lj,fdbkf
 
 
                     }
@@ -466,60 +467,166 @@ namespace OsEngine.Market.Servers.Bitfinex
         }
 
         // private void UpdatePortfolio(List<BitfinexPortfolioRest> portfolios)
-        private void UpdatePortfolio(string json, List<BitfinexPortfolioRest> portfolios)
+        private void UpdatePortfolio(string message/*bool isUpdateValueBeginList<BitfinexPortfolioRest> portfolios*/)
         {
             try
             {
-                //BitfinexPortfolioRest response = JsonConvert.DeserializeObject<BitfinexPortfolioRest>(json);
+                var jsonDoc = JsonDocument.Parse(message);
+                var root = jsonDoc.RootElement;
 
-                Portfolio portfolio = new Portfolio
+                List<BitfinexPortfolioRest> response = JsonConvert.DeserializeObject<List<BitfinexPortfolioRest>>(message);
+
+                 if (root.ValueKind == JsonValueKind.Array)
                 {
-                    Number = "Bitfinex",
-                    ValueBegin = 1,
-                    ValueCurrent = 1
-                    // ValueBegin = portfolios[0].Currency == "USD" ? portfolios[0].Balance : 0,
-                    //  ValueCurrent = portfolios[0].Currency == "USD" ? portfolios[0].AvailableBalance : 0,
-                };
+                    // Handle data messages
+                    int channelId = root[0].GetInt32();
+                    string msgType = root[1].GetString();
 
-
-                if (portfolios == null || portfolios.Count == 0)
-                {
-                    return;
-                }
-
-
-                for (int i = 0; i < portfolios.Count; i++)
-                {
-                    if (decimal.TryParse(portfolios[i].AvailableBalance.ToString(), out decimal availableBalance) &&
-                        decimal.TryParse(portfolios[i].UnsettledInterest.ToString(), out decimal unsettledInterest))
+                    if (channelId == 0)
                     {
-
-
-                        PositionOnBoard position = new PositionOnBoard
+                        // Wallet messages
+                        switch (msgType)
                         {
-                            PortfolioName = portfolios[i].Type,
-                            ValueBegin = availableBalance,
-                            ValueCurrent = availableBalance,
-                            ValueBlocked = unsettledInterest,
-                            SecurityNameCode = portfolios[i].Currency
+                            case "ws":
+                                SendLogMessage("Received wallet snapshot", LogMessageType.System);
+                               // HandleWalletSnapshot(root[2]);
+                                break;
+                            case "wu":
+                                SendLogMessage("Received wallet update", LogMessageType.System);
+                                HandleWalletUpdate(root[2], response);
+                                break;
+                        }
+                    }
+                }
+                // Десериализация JSON в список объектов Wallet
+                    List<BitfinexPortfolioSocket> wallets = JsonConvert.DeserializeObject<List<BitfinexPortfolioSocket>>(message);
+
+                    Portfolio portfolio = new Portfolio();
+                    portfolio.Number = "BitfinexPortfolio";
+                    portfolio.ValueBegin = 1;
+                    portfolio.ValueCurrent = 1;
+
+                    // Используем цикл for для итерации по списку кошельков
+                    for (int i = 0; i < wallets.Count; i++)
+                    {
+                    BitfinexPortfolioSocket wallet = wallets[i];
+
+                        PositionOnBoard pos = new PositionOnBoard()
+                        {
+                            PortfolioName = "BitfinexPortfolio", // Используем название портфеля как имя инструмента
+                            SecurityNameCode = wallet.Currency,   // Используем название валюты как код инструмента
+                            ValueBlocked = 0,  // На Bitfinex нет прямого аналога заблокированных средств в этой секции, можно оставить как 0
+                            ValueCurrent = wallet.Balance.ToDecimal(),       // Текущий баланс для данной валюты
                         };
 
+                        // Если указано, обновляем начальное значение баланса
+                        //if (isUpdateValueBegin)
+                        //{
+                            pos.ValueBegin = wallet.Balance.ToDecimal();
+                        //}
 
-                        portfolio.SetNewPosition(position);
+                        // Добавляем новую позицию в портфель
+                        portfolio.SetNewPosition(pos);
                     }
-                    else
-                    {
-                        SendLogMessage($"Failed to parse balance or interest for portfolio {portfolios[i].Currency}", LogMessageType.Error);
-                    }
-                }
 
-                PortfolioEvent?.Invoke(new List<Portfolio> { portfolio });
+                    // Генерация события с обновленным портфелем
+                    PortfolioEvent(new List<Portfolio> { portfolio });
+                
+
+
+
+                //Portfolio portfolio = new Portfolio
+                //{
+                //    Number = "Bitfinex",
+                //    ValueBegin = 1,
+                //    ValueCurrent = 1
+                //    // ValueBegin = portfolios[0].Currency == "USD" ? portfolios[0].Balance : 0,
+                //    //  ValueCurrent = portfolios[0].Currency == "USD" ? portfolios[0].AvailableBalance : 0,
+                //};
+
+
+                //if (portfolios == null || portfolios.Count == 0)
+                //{
+                //    return;
+                //}
+
+
+                //for (int i = 0; i < portfolios.Count; i++)
+                //{
+                //    if (decimal.TryParse(portfolios[i].AvailableBalance.ToString(), out decimal availableBalance) &&
+                //        decimal.TryParse(portfolios[i].UnsettledInterest.ToString(), out decimal unsettledInterest))
+                //    {
+
+
+                //        PositionOnBoard position = new PositionOnBoard
+                //        {
+                //            PortfolioName = portfolios[i].Type,
+                //            ValueBegin = availableBalance,
+                //            ValueCurrent = availableBalance,
+                //            ValueBlocked = unsettledInterest,
+                //            SecurityNameCode = portfolios[i].Currency
+                //        };
+
+
+                //        portfolio.SetNewPosition(position);
+                //    }
+                //    else
+                //    {
+                //        SendLogMessage($"Failed to parse balance or interest for portfolio {portfolios[i].Currency}", LogMessageType.Error);
+                //    }
+                //}
+
+                // PortfolioEvent?.Invoke(new List<Portfolio> { portfolio });
 
             }
             catch (Exception exception)
             {
                 SendLogMessage($"{exception.Message}", LogMessageType.Error);
             }
+        }
+
+        private void HandleWalletUpdate(JsonElement walletUpdate, List<BitfinexPortfolioRest> portfolios)
+        {
+            Portfolio portfolio = new Portfolio
+            {
+                Number = "Bitfinex",
+                ValueBegin = 1,
+                ValueCurrent = 1
+                // ValueBegin = portfolios[0].Currency == "USD" ? portfolios[0].Balance : 0,
+                //  ValueCurrent = portfolios[0].Currency == "USD" ? portfolios[0].AvailableBalance : 0,
+            };
+
+
+            if (portfolios == null || portfolios.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < portfolios.Count; i++)
+            {
+                if (decimal.TryParse(portfolios[i].AvailableBalance.ToString(), out decimal availableBalance) &&
+                    decimal.TryParse(portfolios[i].UnsettledInterest.ToString(), out decimal unsettledInterest))
+                {
+
+
+                    PositionOnBoard position = new PositionOnBoard
+                    {
+                        PortfolioName = portfolios[i].Type,
+                        ValueBegin = availableBalance,
+                        ValueCurrent = availableBalance,
+                        ValueBlocked = unsettledInterest,
+                        SecurityNameCode = portfolios[i].Currency
+                    };
+
+
+                    portfolio.SetNewPosition(position);
+                }
+                else
+                {
+                    SendLogMessage($"Failed to parse balance or interest for portfolio {portfolios[i].Currency}", LogMessageType.Error);
+                }
+            }
+            SendLogMessage($" Update Wallet Type: {walletUpdate[0]}, Currency: {walletUpdate[1]}, Balance: {walletUpdate[2]}", LogMessageType.System);
         }
 
 
@@ -1992,9 +2099,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                         UpdateMyTrade(message);
                         continue;
                     }
-                    if (message.Contains("wu"))
+                    if (message.Contains("wu") || message.Contains("ws"))
                     {
-                        UpdatePortfolio(message);
+                         UpdatePortfolio(message);
+                        
                     }
 
                     //if(message.Contains("CHAN_ID = 0") && message.Contains("ou"))
