@@ -41,6 +41,7 @@ using Com.Lmax.Api.Internal;
 using OsEngine.Market.Servers.Transaq.TransaqEntity;
 using OsEngine.Market.Servers.BitMax;
 using Newtonsoft.Json.Linq;
+using System.Windows.Documents;
 
 
 
@@ -233,7 +234,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                     string jsonResponse = response.Content;
 
 
-                    List<List<object>> securityList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
+                      List<List<object>> securityList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
+                   
+                    //List < List< BitfinexSecurity>> securityList = JsonConvert.DeserializeObject<List<List<BitfinexSecurity>>>(jsonResponse);
 
                     if (securityList == null)
                     {
@@ -243,15 +246,13 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     List<BitfinexSecurity> security = new List<BitfinexSecurity>();
 
-                    for (int i = 0; i < 3; i++)
-                    //for (int i = 0; i < securityList.Count; i++)
+                   // for (int i = 0; i < 3; i++)
+                    for (int i = 0; i < securityList.Count; i++)
                     {
                         var item = securityList[i];
 
                         BitfinexSecurity ticker = new BitfinexSecurity
-
                         {
-
                             Symbol = item[0].ToString(),
                             Bid = (item[1]).ToString(),
                             BidSize = (item[2]).ToString(),
@@ -266,7 +267,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                         };
 
                         security.Add(ticker);
-
                     }
 
                     UpdateSecurity(security);
@@ -2126,10 +2126,12 @@ namespace OsEngine.Market.Servers.Bitfinex
                 // Если пришло сообщение об обновлении трейдов
                 if (data.ValueKind == JsonValueKind.Array && data.GetArrayLength() >= 4)
                 {
+
                     var tradeId = data[0].GetInt64(); // ID сделки
                     var timestamp = data[1].GetInt64(); // Временная метка сделки
                     var amount = data[2].GetDecimal(); // Объем сделки
                     var price = data[3].GetDecimal(); // Цена сделки
+
 
                     // Создание объекта для хранения информации о сделке
                     Trade newTrade = new Trade
@@ -2155,61 +2157,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
 
         }
-
-        //private void UpdateTrade(BitfinexTradeUpdate tradeUpdate)
-        //{
-        //    try
-        //    {
-
-        //        // Проверка и конвертация поля Price
-        //        decimal price;
-        //        try
-        //        {
-        //            price = decimal.Parse(tradeUpdate.Price, NumberStyles.Float, CultureInfo.InvariantCulture);
-        //        }
-        //        catch (FormatException)
-        //        {
-        //            throw new FormatException($"Неверный формат цены: {tradeUpdate.Price}");
-        //        }
-
-        //        // Проверка и конвертация поля Amount
-        //        decimal amount;
-        //        try
-        //        {
-        //            amount = decimal.Parse(tradeUpdate.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);//Параметр NumberStyles.Float указывает, что строка может содержать числа в экспоненциальной нотации и/или использовать плавающую точку.
-        //                                                                                                         //Он позволяет строке содержать символы +, -, E, e, . (точка), а также цифры.
-        //                                                                                                         // Параметр CultureInfo.InvariantCulture указывает, что при преобразовании строки в число нужно использовать инвариантную культуру.Инвариантная культура основана на английском языке и используется для стандартного форматирования чисел и дат.
-        //                                                                                                         //  CultureInfo.InvariantCulture гарантирует, что при анализе строки используется стандартное форматирование чисел, независимо от региональных настроек компьютера.
-        //        }
-        //        catch (FormatException)
-        //        {
-        //            throw new FormatException($"Неверный формат количества: {tradeUpdate.Amount}");
-        //        }
-
-        //        // Проверка и конвертация поля Timestamp
-
-        //         long  timestamp = Convert.ToInt64(tradeUpdate.Timestamp);
-
-
-        //        Trade newTrade = new Trade
-        //        {
-        //            SecurityNameCode = _currentSymbol,
-        //            Price = price,
-        //            Id = tradeUpdate.Id,
-        //            Time = TimeManager.GetDateTimeFromTimeStamp(timestamp),
-        //            Volume = Math.Abs(amount),
-        //            Side = amount > 0 ? Side.Buy : Side.Sell
-        //        };
-
-        //        ServerTime = newTrade.Time;
-
-        //        NewTradesEvent?.Invoke(newTrade);
-        //    }
-        //    catch (Exception exception)
-        //    {
-        //        SendLogMessage("$\"Ошибка формата при обновлении трейда:." + exception.Message.ToString(), LogMessageType.Error);
-        //    }
-        //}
 
 
         private void PrivateMessageReader()
@@ -2259,21 +2206,22 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var jsonDocument = JsonDocument.Parse(message);
                     var root = jsonDocument.RootElement;
                     var eventType = root.GetProperty("event").GetString();
-                    //if(message.Contains("CHAN_ID = 0") chanelId == 0
+
+                    //if(message.Contains("CHAN_ID = 0") chanelId == 0)
+
                     if (message.Contains("ou"))
                     {
                         UpdateOrder(message);
-                        continue;
+                       // continue;
                     }
                     if (message.Contains("tu"))
                     {
                         UpdateMyTrade(message);
-                        continue;
+                       //continue;
                     }
                     if ( message.Contains("ws"))
                     {
                          UpdatePortfolio(message);
-                        
                     }
 
                 }
@@ -2360,59 +2308,68 @@ namespace OsEngine.Market.Servers.Bitfinex
             return preVolume;
         }
 
+    
+
         private void UpdateOrder(string message)
         {
             try
             {
-                var response = JsonConvert.DeserializeObject<BitfinexOrderData>(message);
+                // Десериализация сообщения в объект BitfinexOrderData
+                var response = JsonConvert.DeserializeObject<List<BitfinexOrderData>>(message);
 
-                if (response == null)
-                {
-                    return;
-                }
-                if (string.IsNullOrEmpty(response.Cid))
-                //if (string.IsNullOrEmpty(response.Id))
+                if (response == null || response.Count == 0)
                 {
                     return;
                 }
 
-                OrderStateType stateType = GetOrderState(response.Status/*, response.Amount*/);
-
-                if (response.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) && stateType == OrderStateType.Activ)//StringComparison.OrdinalIgnoreCase*что сравнение должно быть нечувствительным к регистру.
+                // Перебор всех ордеров в ответе
+                for (int i = 0; i < response.Count; i++)
                 {
-                    return;
+                    var orderData = response[i];
+
+                    if (string.IsNullOrEmpty(orderData.Cid))
+                    {
+                        continue; // Пропускаем ордера без Cid ИЛИ RETURN?
+                    }
+
+                    // Определение состояния ордера
+                    OrderStateType stateType = GetOrderState(orderData.Status);
+
+                    // Игнорируем ордера типа "EXCHANGE MARKET" и активные
+                    if (orderData.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) && stateType == OrderStateType.Activ)
+                    {
+                        continue;
+                    }
+
+                    // Создаем новый объект ордера
+                    var updateOrder = new Order
+                    {
+                        SecurityNameCode = orderData.Symbol,
+                        TimeCallBack = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(orderData.MtsCreate)),
+                        NumberUser = Convert.ToInt32(orderData.Cid),
+                        NumberMarket = orderData.Id,
+                        Side = orderData.Amount.Equals("-") ? Side.Sell : Side.Buy, // Продаем, если количество отрицательное
+                        State = stateType,
+                        TypeOrder = orderData.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) ? OrderPriceType.Market : OrderPriceType.Limit,
+                        Volume = Math.Abs(orderData.Amount.ToDecimal()), // Абсолютное значение объема
+                        Price = orderData.Price.ToDecimal(),
+                        ServerType = ServerType.Bitfinex,
+                        PortfolioNumber = "BitfinexPortfolio"
+                    };
+
+                    // Если ордер исполнен или частично исполнен, обновляем сделку
+                    if (stateType == OrderStateType.Done || stateType == OrderStateType.Patrial)// Partial  
+                    {
+                        UpdateMyTrade(message);
+                    }
+
+                    // Вызываем событие для обновленного ордера
+                    MyOrderEvent?.Invoke(updateOrder);
                 }
-
-                var updateOrder = new Order
-                {
-                    SecurityNameCode = response.Symbol,
-                    TimeCallBack = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(response.MtsCreate)),
-                    NumberUser = Convert.ToInt32(response.Cid),
-                    NumberMarket = response.Id,
-                    Side = response.Amount.Equals("-") ? Side.Sell : Side.Buy,
-                    //State = (OrderStateType)Enum.Parse(typeof(OrderStateType), response.Status),
-                    State = stateType,
-                    TypeOrder = response.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) ? OrderPriceType.Market : OrderPriceType.Limit,
-                    //   Volume = response.Status.Equals("EXECUTED") ? (response.AmountOrig).ToDecimal() : Convert.ToDecimal(response.Amount),//ACTIVE
-                    // Volume = stateType == OrderStateType.Done ? response.Amount.ToDecimal() : response.AmountOrig.ToDecimal(),  //что тут должно быть?
-                    Volume = Math.Abs(response.Amount.ToDecimal()),
-                    Price = (response.Price).ToDecimal(),
-                    ServerType = ServerType.Bitfinex,
-                    PortfolioNumber = "BitfinexPortfolio"
-
-                };
-
-                //если ордер исполнен, вызываем MyTradeEvent
-                if (stateType == OrderStateType.Done
-                    || stateType == OrderStateType.Patrial)
-                {
-                    UpdateMyTrade(message);
-                }
-                  MyOrderEvent?.Invoke(updateOrder);
-
             }
             catch (Exception exception)
             {
+                // Логируем ошибку
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
@@ -2631,12 +2588,20 @@ namespace OsEngine.Market.Servers.Bitfinex
                         return;
                     }
                     //
+
+                    // Парсим JSON-строку в JArray (массив JSON)
+                    JArray jsonArray = JArray.Parse(responseBody);
+
+                    //// Путь к статусу "ACTIVE" в JSON структуре
+                    //string status = (string)jsonArray[4][0][13];
+
                     if (responseArray.Contains("on-req"))
                     {
                         // Извлечение нужных элементов
                         var dataJson = responseArray[4].ToString();
-
-                        string status = responseArray[6].ToString();
+                        string status = (string)jsonArray[4][0][13];
+                        
+                        //string status = responseArray[6].ToString();
                         string text = responseArray[7].ToString();
 
                         // Десериализация dataJson в список заказов
@@ -2657,7 +2622,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         //Order order = ConvertToOsEngineOrder(orderData, PortfolioName);
 
-                        SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{status},{text}", LogMessageType.Trade);
+                        SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{text}", LogMessageType.Trade);
 
                     }
                 }
@@ -3220,7 +3185,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-        // public void GetAllActivOrders()////////////////////111111111
+       
         public void GetAllActivOrders()
         {
             // post https://api.bitfinex.com/v2/auth/r/orders
@@ -3290,14 +3255,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                             allOrders.Add(newOrder);
 
+                            allOrders[i].TimeCreate = allOrders[i].TimeCallBack;
+                           
                             MyOrderEvent?.Invoke(allOrders[i]);
 
                         }
 
                     }
-                    //orders[i].TimeCreate = orders[i].TimeCallBack;
-
-
+                   
                 }
                 else
                 {
