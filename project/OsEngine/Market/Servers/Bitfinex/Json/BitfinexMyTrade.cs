@@ -73,3 +73,22 @@ public class BitfinexTradeSnapshot
 
 
 
+// Определяем модель для структуры данных
+public class BitfinexTradeUpdate1
+{// [10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
+
+    public int ChannelId { get; set; }    // 10098 - идентификатор канала
+    public string Type { get; set; }       // "tu" - тип сообщения
+    public TradeData Data { get; set; }    // Объект с данными о торговой операции
+}
+
+// Класс для хранения данных о торговой операции
+public class TradeData
+{
+    public long TradeId { get; set; }      // 1657561837
+    public long OrderId { get; set; }      // 1726071091967
+    public decimal Amount { get; set; }    // -28.61178052
+    public decimal Price { get; set; }     // 0.1531
+}
+
+

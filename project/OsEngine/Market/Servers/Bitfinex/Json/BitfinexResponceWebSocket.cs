@@ -108,7 +108,10 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
         // "event":"subscribe","channel":"book","symbol":"tBTCUSD","prec":"P0","freq":"F0","len":"25","subId": 123
     }
 
-       
+    
+    
+
+
     }
 
 

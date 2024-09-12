@@ -13,6 +13,8 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
    
     public class BitfinexResponseOrder
     {
+        public List<BitfinexOrderData> OrderData { get; set; } // Это основной массив данных ордера
+     
         public string Mts { get; set; } // Временная метка (MTS)//1678988263842, //MTS
         public string Type { get; set; } // Тип события (TYPE)/ "ou-req"order cancel request, //TYPE
         public string MessageId { get; set; } // ID сообщения (MESSAGE_ID)
