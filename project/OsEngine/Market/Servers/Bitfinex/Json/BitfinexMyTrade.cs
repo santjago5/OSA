@@ -77,7 +77,7 @@ public class BitfinexTradeSnapshot
 public class BitfinexTradeUpdate1
 {// [10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
 
-    public int ChannelId { get; set; }    // 10098 - идентификатор канала
+    public string ChannelId { get; set; }    // 10098 - идентификатор канала
     public string Type { get; set; }       // "tu" - тип сообщения
     public TradeData Data { get; set; }    // Объект с данными о торговой операции
 }
@@ -85,10 +85,18 @@ public class BitfinexTradeUpdate1
 // Класс для хранения данных о торговой операции
 public class TradeData
 {
-    public long TradeId { get; set; }      // 1657561837
-    public long OrderId { get; set; }      // 1726071091967
-    public decimal Amount { get; set; }    // -28.61178052
-    public decimal Price { get; set; }     // 0.1531
+    public string Id { get; set; }      // 1657561837
+    public string Mts { get; set; }      // 1726071091967
+    public string Amount { get; set; }    // -28.61178052
+    public string Price { get; set; }     // 0.1531
 }
 
-
+//[
+//  17470, //CHANNEL_ID
+//  "te", //MSG_TYPE
+//  [
+//    401597395, //ID
+//    1574694478808, //MTS
+//    0.005, //AMOUNT
+//    7245.3 //PRICE
+//  ] //TRADE

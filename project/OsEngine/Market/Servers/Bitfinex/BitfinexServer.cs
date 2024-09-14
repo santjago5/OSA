@@ -31,6 +31,7 @@ using ErrorEventArgs = SuperSocket.ClientEngine.ErrorEventArgs;
 using WebSocket = WebSocket4Net.WebSocket;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Newtonsoft.Json.Linq;
+using System.Globalization;
 
 
 
@@ -219,6 +220,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
                 _apiPath = "v2/tickers?symbols=ALL";
+                //_apiPath = $"v2/ticker/tBTCUSD";
 
                 var response = ExecuteRequest(_apiPath, null);
 
@@ -1206,194 +1208,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         List<MarketDepthLevel> bids = new List<MarketDepthLevel>();
 
 
-        //public void ProcessOrderBookResponse(string jsonResponse, long bookChannelId, string symbol)
-        //{
-        //    JsonDocument document = JsonDocument.Parse(jsonResponse);
-        //    JsonElement root = document.RootElement;
-
-        //    long chanelId = root[0].GetInt64();
-        //     JsonElement data = root[1];
-            
-
-        //    //if (chanelId == tradeChannelId)
-        //    //{
-        //    //    return;
-        //    //}
-
-
-        //    if (chanelId == bookChannelId)//излишняя проверка
-        //    {
-
-        //        // Проверяем, является ли data массивом массивов (snapshot)
-        //        //if (data.ValueKind == JsonValueKind.Array && data[0].ValueKind == JsonValueKind.Array)
-        //        //{
-        //            //// Это snapshot
-        //            //var snapshot = new BitfinexBookSnapshot
-        //            //{
-        //            //    ChannelId = chanelId.ToString()
-        //            //};
-
-        //            marketDepth.SecurityNameCode = symbol;
-
-        //            // Очистка старых данных и добавление новых уровней
-        //            bids.Clear();
-        //            asks.Clear();
-
-        //            // Используем цикл for для итерации по элементам массива
-        //            for (int i = 0; i < data.GetArrayLength(); i++)
-        //            {
-        //                var entryElement = data[i];
-
-        //                var price = entryElement[0].GetDecimal();
-        //                var count = entryElement[1].GetDecimal();//GetInt32();
-        //                var amount = entryElement[2].GetDecimal();
-
-        //                if (amount > 0)
-        //                {
-        //                    // Это бид
-        //                    var bidLevel = new MarketDepthLevel
-        //                    {
-        //                        Price = price,
-        //                        Bid = amount
-        //                    };
-        //                    //marketDepth.Bids.Add(bidLevel);
-        //                    bids.Add(bidLevel);
-
-        //                }
-        //                else
-        //                {
-        //                    // Это аск
-        //                    var askLevel = new MarketDepthLevel
-        //                    {
-        //                        Price = price,
-        //                        Ask = Math.Abs(amount)
-        //                    };
-        //                    //marketDepth.Asks.Add(askLevel);
-        //                    asks.Add(askLevel);
-
-        //                }
-        //            }
-
-        //            // marketDepth.Time = DateTime.UtcNow;
-
-        //        }
-        //        else if (data.ValueKind == JsonValueKind.Array)
-        //        {
-        //            // Это update
-        //            var price = data[0].GetDecimal();
-        //           var count = data[1].GetDecimal();//GetInt32();
-        //            var amount = data[2].GetDecimal();
-
-        //            if (count == 0)
-        //            {
-        //                // Удаление уровня из бидов
-        //                if (amount > 0)
-        //                {
-        //                    for (int i = 0; i < marketDepth.Bids.Count; i++)
-
-        //                    {
-        //                        if (marketDepth.Bids[i].Price == price)
-        //                        {
-        //                            marketDepth.Bids.RemoveAt(i);
-
-        //                            break;
-        //                        }
-        //                    }
-        //                }
-        //                else// Удаление уровня из асков
-        //                {
-        //                    for (int i = 0; i < marketDepth.Asks.Count; i++)
-
-        //                    {
-        //                        if (marketDepth.Asks[i].Price == price)
-
-        //                        {
-        //                            marketDepth.Asks.RemoveAt(i);
-
-        //                            break;
-        //                        }
-        //                    }
-        //                }
-
-        //            }
-        //            else
-        //            {
-        //                // Обновление или добавление уровня
-        //                var level = new MarketDepthLevel
-        //                {
-        //                    Price = price,
-        //                    Bid = amount > 0 ? amount : 0,
-        //                    Ask = amount < 0 ? Math.Abs(amount) : 0
-        //                };
-
-        //                if (amount > 0)
-        //                {
-        //                    bool updated = false;
-        //                    for (int i = 0; i < marketDepth.Bids.Count; i++)
-        //                    {
-
-        //                        if (marketDepth.Bids[i].Price == price)
-        //                        {
-        //                            marketDepth.Bids[i] = level; // Обновление уровня
-
-        //                            updated = true;
-        //                            break;
-        //                        }
-        //                    }
-        //                    if (!updated)
-        //                    {
-        //                        marketDepth.Bids.Add(level); // Добавление нового уровня
-        //                    }
-
-        //                }
-        //                else
-        //                {
-        //                    bool updated = false;
-        //                    for (int i = 0; i < marketDepth.Asks.Count; i++)
-        //                    {
-        //                        if (marketDepth.Asks[i].Price == price)
-        //                        {
-        //                            marketDepth.Asks[i] = level; // Обновление уровня
-
-        //                            updated = true;
-        //                            break;
-        //                        }
-        //                    }
-        //                    if (!updated)
-        //                    {
-        //                        marketDepth.Asks.Add(level); /// Добавление нового уровня
-
-        //                    }
-        //                }
-
-        //            }
-
-        //            //// Присваиваем отсортированные списки ask и bid уровней ордербуку
-        //            marketDepth.Asks = asks;
-        //            marketDepth.Bids = bids;
-
-        //            // Сортировка bid по убыванию (сначала наибольшие цены)
-        //            marketDepth.Bids.Sort((x, y) => y.Price.CompareTo(x.Price));
-
-        //            // Сортировка ask по возрастанию (сначала наименьшие цены)
-        //            marketDepth.Asks.Sort((x, y) => x.Price.CompareTo(y.Price));
-
-        //            //marketDepth.Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64());
-
-        //            marketDepth.Time = DateTime.UtcNow;
-
-        //            if (marketDepth.Asks.Count == 0 ||
-        //                marketDepth.Bids.Count == 0)
-        //            {
-        //                return;
-        //            }
-                
-        //    }
-        //    MarketDepthEvent(marketDepth);
-        //}
-
-      
-public void SnapshotDepth(string jsonResponse, long bookChannelId, string symbol)
+        public void SnapshotDepth(string jsonResponse, long bookChannelId, string symbol)
         {
             JsonDocument document = JsonDocument.Parse(jsonResponse);
             JsonElement root = document.RootElement;
@@ -1414,9 +1229,9 @@ public void SnapshotDepth(string jsonResponse, long bookChannelId, string symbol
                 {
                     var entryElement = data[i];
 
-                    var price = entryElement[0].GetDecimal();
-                    var count = entryElement[1].GetDecimal(); // количество
-                    var amount = entryElement[2].GetDecimal(); // объём
+                    var price = entryElement[0].ToString().ToDecimal();
+                    var count = entryElement[1].ToString().ToDecimal(); // количество
+                    var amount = entryElement[2].ToString().ToDecimal(); // объём
 
                     if (amount > 0)
                     {
@@ -1451,7 +1266,7 @@ public void SnapshotDepth(string jsonResponse, long bookChannelId, string symbol
         }
 
 
-public void UpdateDepth(string jsonResponse, long bookChannelId, string _currentSymbol) 
+        public void UpdateDepth(string jsonResponse, long bookChannelId, string _currentSymbol)
         {
             JsonDocument document = JsonDocument.Parse(jsonResponse);
             JsonElement root = document.RootElement;
@@ -1461,10 +1276,10 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
 
             if (channelId == bookChannelId)
             {
-                var price = data[0].GetDecimal();
-                var count = data[1].GetDecimal(); // количество
-                var amount = data[2].GetDecimal(); // объём
-
+                var price = data[0].ToString().ToDecimal();//цена
+                var count = data[1].ToString().ToDecimal(); // количество
+                var amount = data[2].ToString().ToDecimal();                                 // var amount = decimal.Parse(data[2].GetRawText(), NumberStyles.Float, CultureInfo.InvariantCulture); // объём
+               
                 if (count == 0)
                 {
                     // Удаление уровня
@@ -1680,7 +1495,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
         //    }
         //    else
         //    {
-        //        Console.WriteLine("WebSocket is not open. Ping not sent.");
+        //       ("WebSocket is not open. Ping not sent.");
         //    }
 
 
@@ -1832,27 +1647,23 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                         continue;
                     }
 
-                    if (message.Contains("te"))
-                    {
-                        UpdateTrade(message);
-                    }
 
-                    // message "{\"event\":\"subscribed\",\"channel\":\"trades\",\"chanId\":35,\"symbol\":\"tBTCUSD\",\"pair\":\"BTCUSD\"}"    string
 
+                    // message "{\"event\":\"subscribed\",\"channel\":\"trades\",\"chanId\":35,\"symbol\":\"tBTCUSD\",\"pair\":\"BTCUSD\"}"   
                     if (message.Contains("trades"))
                     {
                         SubscriptionResponseTrade responseTrade = JsonConvert.DeserializeObject<SubscriptionResponseTrade>(message);
                         tradeChannelId = Convert.ToInt64(responseTrade.ChanId);
-                        continue;
-
+                       
                     }
+
                     //"{\"event\":\"subscribed\",\"channel\":\"book\",\"chanId\":40121,\"symbol\":\"tBTCUSD\",\"prec\":\"P0\",\"freq\":\"F0\",\"len\":\"25\",\"pair\":\"BTCUSD\"}"
                     if (message.Contains("book"))
                     {
                         BitfinexResponceWebSocketDepth responseDepth = JsonConvert.DeserializeObject<BitfinexResponceWebSocketDepth>(message);
                         _currentSymbol = responseDepth.Symbol;
                         bookChannelId = Convert.ToInt64(responseDepth.ChanId);
-                        continue;
+                   
 
                     }
                     //"[35,[[1658091709,1726239678068,0.00004,58553],[1658091708,1726239678067,0.00004,58553],[1658091707,1726239676073,0.000121,58553],[1658091706,1726239676063,0.000121,58553],[1658091705,1726239676053,0.000121,58553],[1658091704,1726239676010,0.001,58553],[1658091703,1726239675969,0.000607,58553],[1658091702,1726239675931,0.003047,58553],[1658091701,1726239672699,0.015304,58553],[1658091700,1726239672653,0.034157,58553],[1658091699,1726239672616,0.034157,58553],[1658091698,1726239672599,0.034157,58553],[1658091697,1726239672575,0.034157,58553],[1658091696,1726239671690,0.034157,58553],[1658091695,1726239671641,0.034157,58553],[1658091694,1726239671610,0.034157,58553],[1658091693,1726239671599,0.034157,58553],[1658091692,1726239671588,0.034157,58553],[1658091691,1726239671156,0.00914,58553],[1658091690,1726239671156,0.00883,58553],[1658091689,1726239670761,0.00387081,58553],[1658091688,1726239670706,0.034157,58553],[1658091687,1726239670695,0.034157,58553],[1658091686,1726239670633,0.034157,58553],[1658091685,1726..."   string
@@ -1868,120 +1679,65 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                         JsonElement root = jsonDocument.RootElement;//"[38345,[[1658254420,1726304785797,-36.15002414,0.14842],[1658254339,1726302043810,486.248103,0.14829],[1658254334,1726301335422,6395.24198918,0.14816],[1658254332,1726301088782,6470.90142709,0.14824],[1658254331,1726301068362,6550.23201483,0.14824],[1658254330,1726301016323,6630.53561074,0.14823],[1658254328,1726300937156,6712.39334448,0.14821],[1658254327,1726300912137,6827.56700025,0.14812],[1658254326,1726300893414,6911.36658231,0.14811],[1658254322,1726300293385,5899.26717132,0.14797],[1658254321,1726300293124,10481,0.14797],[1658254317,1726300181585,6409.66976268,0.14797],[1658254269,1726298185033,-40.5975202,0.14803],[1658254251,1726297885002,29.40042961,0.14804],[1658254231,1726296832328,2178.526943,0.14829],[1658254225,1726296733915,-8707.754358,0.14809],[1658214155,1726296213768,295.91558,0.1481],[1658214107,1726295484736,23.63344422,0.14838],[1658214063,1726294344673,6522.3374386,0.14814],[1658214033,1726293672806,-1039.673644,0.14811],[1658213913,1726292556004,6625.60193646,0.1...
 
                         long chanelId = root[0].GetInt64();
-                        int oo = root[1].GetArrayLength();
+                        JsonElement oo = root[1];
 
-
-                        // Проверяем, что корневой элемент - массив и у него есть вложенные элементы
-                        if (root.ValueKind == JsonValueKind.Array && root[1].GetArrayLength() > 5)
+                        if (root[1].ValueKind == JsonValueKind.Array)
                         {
-                            // Получаем второй элемент (индекс 1) — это массив массивов
-                            JsonElement nestedArray = root[1];
-                            // Проверяем, что это массив
-                            if (nestedArray.ValueKind == JsonValueKind.Array && nestedArray.GetArrayLength() > 2)
+                            // Проверяем, что корневой элемент - массив и у него есть вложенные элементы
+                            if (root.ValueKind == JsonValueKind.Array && root[1].GetArrayLength() > 5)
                             {
-                                // Получаем второй подмассив (индекс 1)
-                                // JsonElement subArray = nestedArray[1];//"[1658254446,1726305953677,-269.91712,0.14855]"
+                                // Получаем второй элемент (индекс 1) — это массив массивов
+                                //  JsonElement nestedArray = root[1];
 
-
-                                // Проверяем, что массив содержит ровно 4 элемента (один CHANNEL_ID и три подмассива)
-                                if (chanelId == tradeChannelId)
+                                // Проверяем, что это массив
+                                if (root[1].ValueKind == JsonValueKind.Array && root[1].GetArrayLength() > 2)
                                 {
+                                    // Получаем второй подмассив (индекс 1)
+                                    // JsonElement subArray = nestedArray[1];//"[1658254446,1726305953677,-269.91712,0.14855]"
 
-                                    // ProcessTradeResponse(message, tradeChannelId);
-                                    continue;
+
+                                    // Проверяем, что массив содержит ровно 4 элемента (один CHANNEL_ID и три подмассива)
+                                    if (chanelId == tradeChannelId)
+                                    {
+
+                                        SnapshotTrade(message, tradeChannelId);
+
+                                    }
+
+                                    if (chanelId == bookChannelId)
+                                    {
+                                        SnapshotDepth(message, bookChannelId, _currentSymbol);
+
+                                    }
+
+
                                 }
-
-                                if (chanelId == bookChannelId)
-                                {
-                                     SnapshotDepth(message, bookChannelId, _currentSymbol);
-                                   
-                                }
-
-
                             }
-                        }
-                        else 
-                            //if (nestedArray.ValueKind == JsonValueKind.Array && nestedArray.GetArrayLength() < 2)
+                            else
+                             // if (chanelId == bookChannelId)////посмотреть тут
                             {
-                                if (chanelId == tradeChannelId)
-                                {
-                               
-                                UpdateTrade(message);
-                                }
-
-                                if (chanelId == bookChannelId)////посмотреть тут
-                                {
                                 UpdateDepth(message, bookChannelId, _currentSymbol);
-                                }
+                            }
+                            
+                        }
+                        if (root[1].ValueKind == JsonValueKind.String)
+                        {
+                            string messageType = root[1].ToString();
+
+                            if (messageType == "te" || messageType == "tu")
+                            {
+                                UpdateTrade(message);
                             }
 
-                        
+                        }
+
                     }
-
-
-                    //if (message.StartsWith("["))
-                    //{
-                    //    JsonDocument jsonDocument = JsonDocument.Parse(message);
-                    //    JsonElement root = jsonDocument.RootElement;
-                    //    long chanelId = root[0].GetInt64();
-
-                    //    // Доступ к первому элементу вложенного массива
-
-                    //    // "[[1658091709,1726239678068,0.00004,58553],[1658091708,1726239678067,0.00004,58553],[1658091707,1726239676073,0.000121,58553],[1658091706,1726239676063,0.000121,58553],[1658091705,1726239676053,0.000121,58553],[1658091704,1726239676010,0.001,58553],[1658091703,1726239675969,0.000607,58553],[1658091702,1726239675931,0.003047,58553],[1658091701,1726239672699,0.015304,58553],[1658091700,1726239672653,0.034157,58553],[1658091699,1726239672616,0.034157,58553],[1658091698,1726239672599,0.034157,58553],[1658091697,1726239672575,0.034157,58553],[1658091696,1726239671690,0.034157,58553],[1658091695,1726239671641,0.034157,58553],[1658091694,1726239671610,0.034157,58553],[1658091693,1726239671599,0.034157,58553],[1658091692,1726239671588,0.034157,58553],[1658091691,1726239671156,0.00914,58553],[1658091690,1726239671156,0.00883,58553],[1658091689,1726239670761,0.00387081,58553],[1658091688,1726239670706,0.034157,58553],[1658091687,1726239670695,0.034157,58553],[1658091686,1726239670633,0.034157,58553]...	System.Text.Json.JsonElement
-                    //    // "[35,"te",[1658091711,1726239686802,0.001,58553]]"
-                    //    JsonElement nestedArray = root[1]; // Это вложенный массив//30
-                    //                          // JsonElement firstElement = nestedArray[0]; // Первый элемент второго массива "[22230,[0.15327,0,-1]]"
-                    //                                                                        //if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
-                    //                                                                        //{
-                    //    // Проверяем, что это массив и у него 4 элемента это трейды    
-                    //    if (nestedArray.ValueKind == JsonValueKind.Array && chanelId == tradeChannelId)///
-                    //    {
-                    //        ProcessTradeResponse(message, tradeChannelId);
-                    //    }
-
-                    //    // Проверяем, что это массив и у него 3 элемента это стакан
-                    //    if (nestedArray.ValueKind == JsonValueKind.Array && chanelId == bookChannelId) //условие для такого массива	"[40121,[58547,0,1]]"	string
-
-                    //    {
-                    //        ProcessOrderBookResponse(message, bookChannelId, _currentSymbol);
-                    //    }
-                    //}
-                    // if (message.Contains("tu"))
-                    //if (root[1].ValueKind == JsonValueKind.String)
-                    //{
-                    //    ProcessTradeResponse(message);
-                    //}
-                    //  string messageTypeString = root[1].GetString();
-
+                 
+                     //"[40121,[58547,0,1]]"	
                     ////"[11086,\"te\",[1657562091,1726074346694,38.96758011,0.15345]]"
-                    //if (messageTypeString == "te")
-                    //{
-                    //    ProcessTradeResponse(message);
-
-                    //}
+               
                     // "[11086,"tu",[1657562091,1726074346694,38.96758011,0.15345]]"   
 
-
-                    //    if (message.Contains("te"))
-                    //    {
-                    //        UpdateTrade(message);
-                    //    }
-                    //}
-
-
-                    //}
-
-
-
-                    //if (root[0].ValueKind == JsonValueKind.Number && root[1].ValueKind == JsonValueKind.Array)
-                    //{
-
-
-                    //    //ProcessOrderBookResponse(message, _currentSymbol);
-                    //    ProcessOrderBookResponse(message, chanelId, _currentSymbol);
-
-
-                    //}
 
 
                 }
@@ -1994,7 +1750,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
             }
         }
 
-        private void ProcessTradeResponse(string message, long tradeChannelId)
+        private void SnapshotTrade(string message, long tradeChannelId)
         {
 
             try
@@ -2004,7 +1760,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                 JsonElement root = document.RootElement;
 
                 // Проверка, что это массив и есть минимум два элемента
-                if (root.ValueKind == JsonValueKind.Array /*&& root.GetArrayLength() > 4*/)
+                if (root.ValueKind == JsonValueKind.Array )
                 {
                     //// Извлечение channel_id
                     int channelId = root[0].GetInt32();
@@ -2041,10 +1797,10 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
 
                                 BitfinexTrades newTrade = new BitfinexTrades
                                 {
-                                    Id = trade[0].GetInt64().ToString(),         // ID трейда
-                                    Mts = trade[1].GetInt64().ToString(),        // Время создания
-                                    Amount = trade[2].GetDecimal().ToString(),   // Количество
-                                    Price = trade[3].GetDecimal().ToString()     // Цена
+                                    Id = trade[0].ToString(),         // ID трейда
+                                    Mts = trade[1].ToString(),        // Время создания
+                                    Amount = trade[2].ToString(),
+                                    Price = trade[3].ToString()     // Цена
                                 };
 
                                 tradeSnapshot.Trades.Add(newTrade);  // Добавляем трейд в список
@@ -2053,113 +1809,95 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Console.WriteLine("Error parsing snapshot: " + ex.Message);
+
+                SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
 
-        private void ProcessTradeResponse(string message)//"[35,\"te\",[1658091711,1726239686802,0.001,58553]]"
-        {
-            // Десериализация JSON-ответа в JsonDocument
-            var jsonDocument = JsonDocument.Parse(message);
-            var root = jsonDocument.RootElement;
+        //private void UpadeTrade1(string message)//"[35,\"te\",[1658091711,1726239686802,0.001,58553]]"
+        //{
+        //    // Десериализация JSON-ответа в JsonDocument
+        //    var jsonDocument = JsonDocument.Parse(message);
+        //    var root = jsonDocument.RootElement;
 
-            //[10098,"tu",[1657561837,1726071091967,-28.61178052,0.1531]]
+        //    //[10098,"tu",[1657561837,1726071091967,-28.61178052,0.1531]]
 
-            // Извлечение Channel ID и MSG_TYPE
-            int channelId = root[0].GetInt32(); // CHANNEL_ID
-            var secondElement = root[1];
+        //    // Извлечение Channel ID и MSG_TYPE
+        //    int channelId = root[0].GetInt32(); // CHANNEL_ID
+        //    var secondElement = root[1];
 
-            // Проверка, является ли второй элемент массивом или строкой
-            if (secondElement.ValueKind == JsonValueKind.String)
-            {
-                string msgType = secondElement.GetString(); // MSG_TYPE
+        //    // Проверка, является ли второй элемент массивом или строкой
+        //    if (secondElement.ValueKind == JsonValueKind.String)
+        //    {
+        //        string msgType = secondElement.GetString(); // MSG_TYPE
 
-                // Проверка типа сообщения (msgType должно быть "te" или "tu" для обновления трейдов)
-                if (msgType == "te" || msgType == "tu")//убрать te
-                {
-                    //[1657561837,1726071091967,-28.61178052,0.1531]"
-                    // Извлечение данных трейда
-                    var tradeDataElement = root[2];//ValueKind = Array : "[1658091711,1726239686802,0.001,58553]"
+        //        // Проверка типа сообщения (msgType должно быть "te" или "tu" для обновления трейдов)
+        //        if (msgType == "te" || msgType == "tu")//убрать te
+        //        {
+        //            //[1657561837,1726071091967,-28.61178052,0.1531]"
+        //            // Извлечение данных трейда
+        //            var tradeDataElement = root[2];//ValueKind = Array : "[1658091711,1726239686802,0.001,58553]"
 
-                    // Создание объекта BitfinexTradeUpdate из данных
-                    var trade = new BitfinexTradeUpdate
-                    {
-                        Id = tradeDataElement[0].ToString(),
-                        Timestamp = tradeDataElement[1].ToString(),
-                        Amount = tradeDataElement[2].ToString(),
-                        Price = tradeDataElement[3].ToString()
-                    };
+        //            // Создание объекта BitfinexTradeUpdate из данных
+        //            var trade = new BitfinexTradeUpdate
+        //            {
+        //                Id = tradeDataElement[0].ToString(),
+        //                Timestamp = tradeDataElement[1].ToString(),
+        //                Amount = tradeDataElement[2].ToString(),
+        //                Price = tradeDataElement[3].ToString()
+        //            };
 
-                    // Обработка обновления трейда
-                    //UpdateTrade(trade);
-                    //  UpdateTrade(message);
+        //            // Обработка обновления трейда
+        //            //UpdateTrade(trade);
+        //            //  UpdateTrade(message);
 
-                }
-                else
-                {
-                    SendLogMessage("Неизвестный тип сообщения: " + msgType, LogMessageType.Error);
-                }
-            }
-            else if (secondElement.ValueKind == JsonValueKind.Array)
-            {
-                // Это снимок (snapshot)
-                var tradeArray = secondElement.EnumerateArray().ToList();
+        //        }
+        //        else
+        //        {
+        //            SendLogMessage("Неизвестный тип сообщения: " + msgType, LogMessageType.Error);
+        //        }
+        //    }
+        //    else if (secondElement.ValueKind == JsonValueKind.Array)
+        //    {
+        //        // Это снимок (snapshot)
+        //        var tradeArray = secondElement.EnumerateArray().ToList();
 
-                // Подсчёт количества элементов в массиве
-                int tradeCount = tradeArray.Count;
+        //        // Подсчёт количества элементов в массиве
+        //        int tradeCount = tradeArray.Count;
 
-                // Использование цикла for для итерации по массиву
-                List<BitfinexTradeUpdate> tradeList = new List<BitfinexTradeUpdate>();
+        //        // Использование цикла for для итерации по массиву
+        //        List<BitfinexTradeUpdate> tradeList = new List<BitfinexTradeUpdate>();
 
-                for (int i = 0; i < tradeCount; i++)
-                {
-                    var tradeElement = tradeArray[i];
+        //        for (int i = 0; i < tradeCount; i++)
+        //        {
+        //            var tradeElement = tradeArray[i];
 
-                    // Создание объекта BitfinexTradeUpdate из данных
-                    var trade = new BitfinexTradeUpdate
-                    {
-                        Id = tradeElement[0].ToString(),
-                        Timestamp = tradeElement[1].ToString(),
-                        Amount = tradeElement[2].ToString(),
-                        Price = tradeElement[3].ToString()
-                    };
+        //            // Создание объекта BitfinexTradeUpdate из данных
+        //            var trade = new BitfinexTradeUpdate
+        //            {
+        //                Id = tradeElement[0].ToString(),
+        //                Timestamp = tradeElement[1].ToString(),
+        //                Amount = tradeElement[2].ToString(),
+        //                Price = tradeElement[3].ToString()
+        //            };
 
-                    tradeList.Add(trade);
-                }
+        //            tradeList.Add(trade);
+        //        }
 
-                // Обработка снимка
-                ProcessSnapshot(tradeList);
-            }
-            else
-            {
-                SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
-            }
+        //        // Обработка снимка
+        //      //  ProcessSnapshot(tradeList);
+        //    }
+        //    else
+        //    {
+        //        SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
+        //    }
 
-        }
+        //}
 
 
-        private void ProcessSnapshot(List<BitfinexTradeUpdate> tradeList)////////
-        {
-            //////дописать логику обработки снимков трейдов
-            // Логика обработки снимка трейдов
-            for (int i = 0; i < tradeList.Count; i++)
-            {
-                // Извлечение текущего трейда из списка
-                var trade = tradeList[i];
-
-                trade.Amount = tradeList[i].Amount;
-                trade.Price = tradeList[i].Price;
-                trade.Timestamp = tradeList[i].Timestamp;
-                trade.Id = tradeList[i].Id;
-                // Пример обработки каждого трейда в снимке
-                SendLogMessage($"Обработка трейда: ID = {trade.Id}, Timestamp = {trade.Timestamp}, Amount = {trade.Amount}, Price = {trade.Price}", LogMessageType.System);
-            }
-        }
-        //private void UpdateTrade(string jsonMessage)/// [10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
-
-        private void UpdateTrade(string jsonMessage)//
+        private void UpdateTrade(string jsonMessage)//[10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
         {
             // Логика обновления трейда
 
@@ -2167,83 +1905,47 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
             {
                 // Парсим полученные данные из JSON
                 JsonDocument document = JsonDocument.Parse(jsonMessage); //ValueKind = Array : "[35,"tu",[1658091711,1726239686802,0.001,58553]]"
-
+              
+                //  BitfinexTradeUpdate1 responseTrade = JsonConvert.DeserializeObject<BitfinexTradeUpdate1>(jsonMessage);
                 // Получаем корневой элемент массива
                 JsonElement root = document.RootElement;// ValueKind = Array : "[35,"tu",[1658091711,1726239686802,0.001,58553]]"
-
-                // Проверка на валидность формата сообщения
-                //if (root.ValueKind != JsonValueKind.Array )
-                //{
-                //    return;
-                //}
+              
+                List<BitfinexTradeUpdate1> tradeList = new List<BitfinexTradeUpdate1>();
 
                 // Создаем объект BitfinexTradeUpdate и заполняем его данными
                 BitfinexTradeUpdate1 tradeUpdate = new BitfinexTradeUpdate1
                 {
-                    ChannelId = root[0].GetInt32(),
-                    Type = root[1].GetString(),
+                    ChannelId = root[0].ToString(),
+                    Type = root[1].ToString(),
                     Data = new TradeData
                     {
-                        TradeId = root[2][0].GetInt64(),
-                        OrderId = root[2][1].GetInt64(),
-                        Amount = root[2][2].GetDecimal(),
-                        Price = root[2][3].GetDecimal()
+                        Id = root[2][0].ToString(),
+                        Mts = root[2][1].ToString(),
+                        Amount = root[2][2].ToString(),
+                        Price = root[2][3].ToString()
                     }
                 };
+                //tradeList.Add(tradeUpdate);
 
+                    Trade newTrade = new Trade
+                    {
+                        // Создание объекта для хранения информации о сделке
+                        SecurityNameCode = _currentSymbol,                      // Название инструмента
+                        Id = tradeUpdate.Data.Id.ToString(),               // Присваиваем TradeId из tradeUpdate
+                        Price = tradeUpdate.Data.Price.ToDecimal(),                         // Присваиваем цену
+                        Volume = Math.Abs(tradeUpdate.Data.Amount.ToDecimal()),             // Присваиваем объем (сделка может быть отрицательной для продаж)
+                        Side = (tradeUpdate.Data.Amount).ToDecimal() > 0 ? Side.Buy : Side.Sell, // Определяем сторону сделки
+                        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(tradeUpdate.Data.Mts))
+                    };
+                    ServerTime = newTrade.Time;  // Присваиваем временную метку сделки
 
-                // Создание объекта для хранения информации о сделке
-                Trade newTrade = new Trade
-                {
-                    SecurityNameCode = _currentSymbol,                      // Название инструмента
-                    Id = tradeUpdate.Data.TradeId.ToString(),               // Присваиваем TradeId из tradeUpdate
-                    Price = tradeUpdate.Data.Price,                         // Присваиваем цену
-                    Volume = Math.Abs(tradeUpdate.Data.Amount),             // Присваиваем объем (сделка может быть отрицательной для продаж)
-                    Side = tradeUpdate.Data.Amount > 0 ? Side.Buy : Side.Sell, // Определяем сторону сделки
+                    NewTradesEvent?.Invoke(newTrade);
+                
 
-                };
-
-                ServerTime = newTrade.Time;  // Присваиваем временную метку сделки
-
-                NewTradesEvent?.Invoke(newTrade);
-
-
-
-                //// Получение ID канала и данных
-                //var channelId = root[0].GetInt32();
-                //var data = root[1];
-
-                //// Если пришло сообщение об обновлении трейдов
-                //if (data.ValueKind == JsonValueKind.String && data.GetArrayLength() == 4)
-
-                //   // if (data.ToString() == "tu" && data.GetArrayLength() == 4 )
-                //{ 
-                //    var tradeId = data[0].GetInt64(); // ID сделки
-                //    var timestamp = data[1].GetInt64(); // Временная метка сделки
-                //    var amount = data[2].GetDecimal(); // Объем сделки
-                //    var price = data[3].GetDecimal(); // Цена сделки
-
-
-                //    // Создание объекта для хранения информации о сделке
-                //    Trade newTrade = new Trade
-                //    {
-                //        SecurityNameCode = _currentSymbol,
-                //        Id = tradeId.ToString(),
-                //        Price = price,
-                //        Volume = Math.Abs(amount), // Объем может быть отрицательным для продаж
-                //        Side = amount > 0 ? Side.Buy : Side.Sell, // Определение стороны сделки
-                //        Time = TimeManager.GetDateTimeFromTimeStamp(timestamp)// дата и время
-
-                //    };
-
-                //    ServerTime = newTrade.Time;
-
-                //    NewTradesEvent?.Invoke(newTrade);
-                //}
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                SendLogMessage("Error in trade update: " + ex.Message, LogMessageType.Error);
+                SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
         }
 
@@ -2303,7 +2005,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                         UpdateOrder(message);
                         // continue;
                     }
-                    if (message.Contains("pu"))
+                    if (message.Contains("pu"))///////какой евент выбирать?
                     {
                         UpdateMyTrade(message);
                         //continue;
@@ -2681,7 +2383,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                     {
                         // Извлечение нужных элементов
                         var dataJson = responseArray[4].ToString();
-                        string status = (jsonArray[4][0][13]).ToString();
+                        string status = jsonArray[4][0][13].ToString();
 
                         //string status = responseArray[6].ToString();
                         string text = responseArray[7].ToString();
@@ -2694,8 +2396,8 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                         BitfinexOrderData orderData = new BitfinexOrderData
                         {
                             //Cid = Convert.ToString(orders[2]),
-                            Id = (orders[0]).ToString(),
-                            Symbol = (orders[3]).ToString(),
+                            Id = orders[0].ToString(),
+                            Symbol = orders[3].ToString(),
 
                         };
 
@@ -2966,9 +2668,6 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
         }
 
 
-
-
-
         public List<Order> GetAllOrdersFromExchange()
         {
             // post https://api.bitfinex.com/v2/auth/r/orders
@@ -3008,7 +2707,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
                             newOrder.ServerType = ServerType.Bitfinex;
                             newOrder.SecurityNameCode = activeOrders[i].Symbol;
 
-                            newOrder.NumberUser = Convert.ToInt32(activeOrders[i].Cid);/////
+                            newOrder.NumberUser = Convert.ToInt32(activeOrders[i].Cid);
 
                             newOrder.NumberMarket = activeOrders[i].Id;
                             newOrder.Side = activeOrders[i].Amount.Equals("-") ? Side.Sell : Side.Buy;
@@ -3019,9 +2718,9 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
 
                             orders.Add(newOrder);
 
-                            //allOrders[i].TimeCreate = allOrders[i].TimeCallBack;
+                            //orders[i].TimeCreate = orders[i].TimeCallBack;
 
-                            // MyOrderEvent?.Invoke(allOrders[i]);
+                             MyOrderEvent?.Invoke(orders[i]);
 
 
                         }
@@ -3198,7 +2897,7 @@ public void UpdateDepth(string jsonResponse, long bookChannelId, string _current
 
             // https://api.bitfinex.com/v2/auth/r/trades/{symbol}/hist
 
-            _apiPath = "v2/auth/r/trades/{symbol}";////////////
+            _apiPath = $"v2/auth/r/trades/{security}";////////////
             var body = new
             {
                 id = orderId,
