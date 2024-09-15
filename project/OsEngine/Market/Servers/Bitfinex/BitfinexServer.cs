@@ -2250,9 +2250,9 @@ namespace OsEngine.Market.Servers.Bitfinex
                     //// Путь к статусу "ACTIVE" в JSON структуре
                     //string status = (string)jsonArray[4][0][13];
 
-                    if (responseArray.Contains("on-req"))
-                    {
-                        // Извлечение нужных элементов
+                    //if (responseArray.Contains("on-req"))
+                    //{
+                    //    // Извлечение нужных элементов
                         var dataJson = responseArray[4].ToString();
                         string status = jsonArray[4][0][13].ToString();
 
@@ -2269,7 +2269,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                             //Cid = Convert.ToString(orders[2]),
                             Id = orders[0].ToString(),
                             Symbol = orders[3].ToString(),
-
                         };
 
                         order.NumberMarket = orderData.Id;
@@ -2282,7 +2281,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{text}", LogMessageType.Trade);
                         //  SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{text}", LogMessageType.System);
 
-                    }
+                   // }
                 }
                 else
                 {
@@ -2370,11 +2369,13 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             _rateGateCancelOrder.WaitToProceed();
 
-            if (OrderStateType.Cancel == order.State)//если ордер активный можно снять
+            _apiPath = "v2/auth/w/order/cancel";
+
+            //если ордер уже отменен ничего не делаем
+            if (order.State == OrderStateType.Cancel)//если ордер активный можно снять
             {
                 return;
             }
-
             long orderId = Convert.ToInt64(order.NumberMarket);
 
             // Формирование тела запроса с указанием ID ордера
@@ -2382,10 +2383,9 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 id = orderId // Идентификатор ордера для отмены
             };
-            _apiPath = "v2/auth/w/order/cancel";
+        
             // Сериализуем объект тела в JSON
 
-            //  string bodyJson = JsonConvert.SerializeObject(body);
 
             string bodyJson = JsonSerializer.Serialize(body);
 
@@ -2401,17 +2401,18 @@ namespace OsEngine.Market.Servers.Bitfinex
                     // Выводим тело ответа
                     string responseBody = response.Content;
                     var responseJson = JsonConvert.DeserializeObject<List<object>>(responseBody);
-
+                  
 
                     //if (responseJson.Contains("oc"))
                     //{
                         //if (responseJson.Contains("CANCELED"))
                         //{
                             SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
-                            order.State = OrderStateType.Cancel;// надо или нет
+                            order.State = OrderStateType.Cancel;
                             MyOrderEvent(order);
-                       // }
-                    //}
+                    // }
+                    //} State = OrderStateType.Active если ордер активный
+                    SendLogMessage($"Order canceled {response.StatusCode} - {response.Content}, {response.ErrorMessage}", LogMessageType.Error);
                 }
 
                 else
