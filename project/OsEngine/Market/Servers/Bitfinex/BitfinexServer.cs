@@ -205,7 +205,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         /// </summary>
         #region 3 Securities
 
-        private RateGate _rateGateGetsecurity = new RateGate(280, TimeSpan.FromMilliseconds(200));
+        private RateGate _rateGateGetsecurity = new RateGate(1, TimeSpan.FromMilliseconds(200));
 
         private RateGate _rateGatePositions = new RateGate(1, TimeSpan.FromMilliseconds(200));
 
@@ -229,7 +229,8 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     string jsonResponse = response.Content;
 
-                    List<List<object>> securityList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
+                     List<List<object>> securityList = JsonConvert.DeserializeObject<List<List<object>>>(jsonResponse);
+
 
                     if (securityList == null)
                     {
@@ -246,33 +247,38 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     List<BitfinexSecurity> security = new List<BitfinexSecurity>();
 
-                    for (int i = 0; i < 3; i++)
-                    // for (int i = 0; i < securityList.Count; i++)
-                    {
-                        var item = securityList[i];
+                   
 
-                        BitfinexSecurity ticker = new BitfinexSecurity
+                     for (int i = 0; i < securityList.Count; i++)
+                  
+                    {
+
+                         var item = securityList[i];
+                      
+                            BitfinexSecurity ticker = new BitfinexSecurity
                         {
-                            Symbol = item[0].ToString(),
-                            Bid = (item[1]).ToString(),
-                            BidSize = (item[2]).ToString(),
-                            Ask = (item[3]).ToString(),
-                            AskSize = (item[4]).ToString(),
-                            DailyChange = (item[5]).ToString(),
-                            DailyChangeRelative = (item[6]).ToString(),
-                            LastPrice = (item[7]).ToString(),
-                            Volume = (item[8]).ToString(),
-                            High = (item[9]).ToString(),
-                            Low = (item[10]).ToString()
-                        };
+                                Symbol = item[0].ToString(),
+                                Bid = ConvertScientificNotation(item[1].ToString()),
+                                BidSize = ConvertScientificNotation(item[2].ToString()),
+                                Ask = ConvertScientificNotation(item[3].ToString()),
+                                AskSize = ConvertScientificNotation(item[4].ToString()),
+                                DailyChange = ConvertScientificNotation(item[5].ToString()),
+                                DailyChangeRelative = ConvertScientificNotation(item[6].ToString()),
+                                LastPrice = ConvertScientificNotation(item[7].ToString()),
+                                Volume = ConvertScientificNotation(item[8].ToString()),
+                                High = ConvertScientificNotation(item[9].ToString()),
+                                Low = ConvertScientificNotation(item[10].ToString())
+
+
+                            };
 
                         security.Add(ticker);
 
                     }
 
                     UpdateSecurity(jsonResponse);////////надо или нет
-
                 }
+
 
                 //else
                 //{
@@ -294,6 +300,20 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             }
         }
+
+
+        // Метод для преобразования строки в decimal с учетом научной нотации
+        private string ConvertScientificNotation(string value)
+        {
+            // Преобразование строки в decimal с учетом научной нотации
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+            {
+                return result.ToString(CultureInfo.InvariantCulture);
+            }
+             return value; 
+        }
+
+
 
         ////////private void UpdateSecurity(List<BitfinexSecurity> security)
         ////////{
@@ -354,7 +374,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             List<Security> securities = new List<Security>();
 
             // Проходим по каждому элементу в ответе
-            for (int i = 0; i < response.Count; i++)
+            for (int i = 0; i < 3; i++)
+            //for (int i = 0; i < response.Count; i++)
             {
                 var item = response[i];
 
