@@ -269,7 +269,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                                 High = ConvertScientificNotation(item[9].ToString()),
                                 Low = ConvertScientificNotation(item[10].ToString())
 
-
                             };
 
                         security.Add(ticker);
@@ -313,59 +312,6 @@ namespace OsEngine.Market.Servers.Bitfinex
              return value; 
         }
 
-
-
-        ////////private void UpdateSecurity(List<BitfinexSecurity> security)
-        ////////{
-        ////////    // если на обновление приходит json
-
-
-
-        ////////    try
-        ////////    {
-        ////////        if (security == null || security.Count == 0)
-        ////////        {
-        ////////            return;
-        ////////        }
-
-        ////////        for (int i = 0; i < security.Count; i++)
-        ////////        {
-        ////////            var securityData = security[i];
-
-        ////////            Security newSecurity = new Security();
-        ////////            newSecurity.Exchange = ServerType.Bitfinex.ToString();
-        ////////            newSecurity.Name = securityData.Symbol;
-        ////////            newSecurity.NameFull = securityData.Symbol;
-        ////////            newSecurity.NameClass = securityData.Symbol.StartsWith("f") ? "Futures" : "CurrencyPair";
-        ////////            newSecurity.NameId = Convert.ToString(securityData.Symbol);
-        ////////            newSecurity.Lot = 1;
-        ////////            newSecurity.SecurityType = securityData.Symbol.StartsWith("f") ? SecurityType.Futures : SecurityType.CurrencyPair;
-        ////////            newSecurity.State = SecurityStateType.Activ;
-        ////////            newSecurity.PriceStep = newSecurity.Decimals.GetValueByDecimals();
-        ////////            newSecurity.PriceStepCost = newSecurity.PriceStep;
-        ////////            newSecurity.DecimalsVolume = newSecurity.Decimals;
-
-
-        ////////            _securities.Add(newSecurity);////////////////////////;
-
-        ////////        }
-
-        ////////        SecurityEvent?.Invoke(_securities);
-
-        ////////    }
-        ////////    catch (Exception exception)
-        ////////    {
-        ////////        SendLogMessage(exception.ToString(), LogMessageType.Error);
-        ////////    }
-
-        ////////}
-        /// <summary>
-        /// 
-        /// 
-        /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
-
         private void UpdateSecurity(string json)
         {
             // Десериализация ответа от Bitfinex API
@@ -374,8 +320,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             List<Security> securities = new List<Security>();
 
             // Проходим по каждому элементу в ответе
-            for (int i = 0; i < 3; i++)
-            //for (int i = 0; i < response.Count; i++)
+           // for (int i = 0; i < 3; i++)
+            for (int i = 0; i < response.Count; i++)
             {
                 var item = response[i];
 
@@ -1529,7 +1475,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
-                CreateSubscribleSecurityMessageWebSocket(security);
+                CreateSubscribleMessageWebSocket(security);
 
                 Thread.Sleep(200);
             }
@@ -1539,7 +1485,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        private void CreateSubscribleSecurityMessageWebSocket(Security security)
+        private void CreateSubscribleMessageWebSocket(Security security)
         {
             try
             {
@@ -1830,85 +1776,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        //private void UpadeTrade1(string message)//"[35,\"te\",[1658091711,1726239686802,0.001,58553]]"
-        //{
-        //    // Десериализация JSON-ответа в JsonDocument
-        //    var jsonDocument = JsonDocument.Parse(message);
-        //    var root = jsonDocument.RootElement;
-
-        //    //[10098,"tu",[1657561837,1726071091967,-28.61178052,0.1531]]
-
-        //    // Извлечение Channel ID и MSG_TYPE
-        //    int channelId = root[0].GetInt32(); // CHANNEL_ID
-        //    var secondElement = root[1];
-
-        //    // Проверка, является ли второй элемент массивом или строкой
-        //    if (secondElement.ValueKind == JsonValueKind.String)
-        //    {
-        //        string msgType = secondElement.GetString(); // MSG_TYPE
-
-        //        // Проверка типа сообщения (msgType должно быть "te" или "tu" для обновления трейдов)
-        //        if (msgType == "te" || msgType == "tu")//убрать te
-        //        {
-        //            //[1657561837,1726071091967,-28.61178052,0.1531]"
-        //            // Извлечение данных трейда
-        //            var tradeDataElement = root[2];//ValueKind = Array : "[1658091711,1726239686802,0.001,58553]"
-
-        //            // Создание объекта BitfinexTradeUpdate из данных
-        //            var trade = new BitfinexTradeUpdate
-        //            {
-        //                Id = tradeDataElement[0].ToString(),
-        //                Timestamp = tradeDataElement[1].ToString(),
-        //                Amount = tradeDataElement[2].ToString(),
-        //                Price = tradeDataElement[3].ToString()
-        //            };
-
-        //            // Обработка обновления трейда
-        //            //UpdateTrade(trade);
-        //            //  UpdateTrade(message);
-
-        //        }
-        //        else
-        //        {
-        //            SendLogMessage("Неизвестный тип сообщения: " + msgType, LogMessageType.Error);
-        //        }
-        //    }
-        //    else if (secondElement.ValueKind == JsonValueKind.Array)
-        //    {
-        //        // Это снимок (snapshot)
-        //        var tradeArray = secondElement.EnumerateArray().ToList();
-
-        //        // Подсчёт количества элементов в массиве
-        //        int tradeCount = tradeArray.Count;
-
-        //        // Использование цикла for для итерации по массиву
-        //        List<BitfinexTradeUpdate> tradeList = new List<BitfinexTradeUpdate>();
-
-        //        for (int i = 0; i < tradeCount; i++)
-        //        {
-        //            var tradeElement = tradeArray[i];
-
-        //            // Создание объекта BitfinexTradeUpdate из данных
-        //            var trade = new BitfinexTradeUpdate
-        //            {
-        //                Id = tradeElement[0].ToString(),
-        //                Timestamp = tradeElement[1].ToString(),
-        //                Amount = tradeElement[2].ToString(),
-        //                Price = tradeElement[3].ToString()
-        //            };
-
-        //            tradeList.Add(trade);
-        //        }
-
-        //        // Обработка снимка
-        //      //  ProcessSnapshot(tradeList);
-        //    }
-        //    else
-        //    {
-        //        SendLogMessage("Неизвестный формат сообщения", LogMessageType.Error);
-        //    }
-
-        //}
+     
 
 
         private void UpdateTrade(string jsonMessage)//[10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
@@ -1920,14 +1788,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                 // Парсим полученные данные из JSON
                 JsonDocument document = JsonDocument.Parse(jsonMessage); //ValueKind = Array : "[35,"tu",[1658091711,1726239686802,0.001,58553]]"
               
-                //  BitfinexTradeUpdate1 responseTrade = JsonConvert.DeserializeObject<BitfinexTradeUpdate1>(jsonMessage);
+               
                 // Получаем корневой элемент массива
                 JsonElement root = document.RootElement;// ValueKind = Array : "[35,"tu",[1658091711,1726239686802,0.001,58553]]"
               
-                List<BitfinexTradeUpdate1> tradeList = new List<BitfinexTradeUpdate1>();
+                List<BitfinexUpdateTrades> tradeList = new List<BitfinexUpdateTrades>();
 
-                // Создаем объект BitfinexTradeUpdate и заполняем его данными
-                BitfinexTradeUpdate1 tradeUpdate = new BitfinexTradeUpdate1
+                // Создаем объект BitfinexUpdateTrades и заполняем его данными
+                BitfinexUpdateTrades tradeUpdate = new BitfinexUpdateTrades
                 {
                     ChannelId = root[0].ToString(),
                     Type = root[1].ToString(),
@@ -1991,22 +1859,11 @@ namespace OsEngine.Market.Servers.Bitfinex
                         continue;
                     }
 
-                    if (message.Contains("pong"))
+                    if (message.Contains("pong") || message.Contains("info") || message.Contains("auth"))
                     {
                         continue;
                     }
 
-                    if (message.Contains("auth"))
-                    {
-                       
-                        //GenerateAuthenticate();////////////////
-                        continue;
-                    }
-                    if (message.Contains("info"))
-                    {
-                     
-                       continue;
-                    }
 
                     var jsonDocument = JsonDocument.Parse(message);
                     var root = jsonDocument.RootElement;
@@ -2044,7 +1901,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
 
-                //   BitfinexMyTrade response = JsonConvert.DeserializeObject<BitfinexMyTrade>(message);
+             
                 List<List<object>> tradyList = JsonConvert.DeserializeObject<List<List<object>>>(message);
 
                 if (tradyList == null)
@@ -2513,10 +2370,10 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             _rateGateCancelOrder.WaitToProceed();
 
-            //if (OrderStateType.Cancel == order.State)//если ордер активный можно снять
-            //{
-            //    return;
-            //}
+            if (OrderStateType.Cancel == order.State)//если ордер активный можно снять
+            {
+                return;
+            }
 
             long orderId = Convert.ToInt64(order.NumberMarket);
 
@@ -2546,22 +2403,20 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var responseJson = JsonConvert.DeserializeObject<List<object>>(responseBody);
 
 
-                    if (responseJson.Contains("oc"))
-                    {
-                        if (responseJson.Contains("CANCELED"))
-                        {
+                    //if (responseJson.Contains("oc"))
+                    //{
+                        //if (responseJson.Contains("CANCELED"))
+                        //{
                             SendLogMessage("Order canceled successfully. Order ID: " + order.NumberMarket, LogMessageType.Trade);
                             order.State = OrderStateType.Cancel;// надо или нет
                             MyOrderEvent(order);
-                        }
-                    }
+                       // }
+                    //}
                 }
 
                 else
                 {
-                    //order.State = OrderStateType.Cancel;
-                    //MyOrderEvent(order);
-
+                    
                     CreateOrderFail(order);
                     SendLogMessage($"Order cancellation error: code - {response.StatusCode} - {response.Content}, {response.ErrorMessage}", LogMessageType.Error);
                 }
@@ -2597,13 +2452,10 @@ namespace OsEngine.Market.Servers.Bitfinex
             rateGateChangePriceOrder.WaitToProceed();
             try
             {
-
-
-
                 // Проверка типа ордера
                 if (order.TypeOrder == OrderPriceType.Market)
                 {
-                    SendLogMessage("Can't change price for market order", LogMessageType.Error);
+                    SendLogMessage("Can't change price for  Order Market", LogMessageType.Error);
                     return;
                 }
 

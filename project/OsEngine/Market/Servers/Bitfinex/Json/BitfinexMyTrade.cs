@@ -74,7 +74,7 @@ public class BitfinexTradeSnapshot
 
 
 // Определяем модель для структуры данных
-public class BitfinexTradeUpdate1
+public class BitfinexUpdateTrades
 {// [10098,\"tu\",[1657561837,1726071091967,-28.61178052,0.1531]]"
 
     public string ChannelId { get; set; }    // 10098 - идентификатор канала
