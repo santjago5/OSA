@@ -218,10 +218,11 @@ namespace OsEngine.Market.Servers.Bitfinex
             _rateGateGetsecurity.WaitToProceed();
 
             try
-            {
-                _apiPath = "v2/tickers?symbols=ALL";
-                //_apiPath = $"v2/ticker/tBTCUSD";
+            {// string sec= "tBTCUSD";
+                   //_apiPath = $"v2/ticker/{sec}";
 
+                _apiPath = "v2/tickers?symbols=ALL";
+            
                 var response = ExecuteRequest(_apiPath, null);
 
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -1347,10 +1348,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-
-
-
-
         private void WebSocketPrivate_Opened(object sender, EventArgs e)
         {
 
@@ -1456,11 +1453,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
 
                 if (e == null || string.IsNullOrEmpty(e.Message))
-                {
-                    return;
-                }
-
-                if (e.Message.Contains("hb"))
                 {
                     return;
                 }
@@ -1724,11 +1716,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                         {
                             string messageType = root[1].ToString();
 
-                            if (messageType == "te" || messageType == "tu")
+                            if (messageType == "te" || messageType == "tu" && chanelId!=0)
                             {
                                 UpdateTrade(message);
                             }
-
+                            else
+                            {
+                                UpdateMyTrade(message);
+                            }
                         }
 
                     }
@@ -1780,9 +1775,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                             //                            [401597394, 1574694475040, 0.010, 7245.1]  // Trade 2
                             //                          ]
                             //                        ]
-                            //  JsonElement root = JsonDocument.Parse(json).RootElement;
-
-
+                            
                             // Создаем объект для хранения данных о трейдах
                             TradeSnapshot tradeSnapshot = new TradeSnapshot
                             {
@@ -1984,14 +1977,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     if (message.Contains("auth"))
                     {
-                        return;
+                       
                         //GenerateAuthenticate();////////////////
-                        //continue;
+                        continue;
                     }
                     if (message.Contains("info"))
                     {
-                        return;
-                        // continue;
+                     
+                       continue;
                     }
 
                     var jsonDocument = JsonDocument.Parse(message);
@@ -2005,7 +1998,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         UpdateOrder(message);
                         // continue;
                     }
-                    if (message.Contains("pu"))///////какой евент выбирать?
+                    if (message.Contains("te") /*&& chanelId == 0*/)///////какой евент выбирать?
                     {
                         UpdateMyTrade(message);
                         //continue;
@@ -2052,12 +2045,12 @@ namespace OsEngine.Market.Servers.Bitfinex
                     var myTrade = new MyTrade
                     {
 
-                        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(response.Mts)),
+                        Time = TimeManager.GetDateTimeFromTimeStamp(Convert.ToInt64(response.MtsCreate)),
                         SecurityNameCode = response.Symbol,
                         NumberOrderParent = response.Cid,//что тут должно быть
                         Price = (response.OrderPrice).ToDecimal(),
                         NumberTrade = response.OrderId,//что тут должно быт
-                        Side = response.Amount.Contains("-") ? Side.Sell : Side.Buy,
+                        Side = response.ExecAmount.Contains("-") ? Side.Sell : Side.Buy,
                         // Side = response.Amount > 0 ? Side.Buy : Side.Sell;
                         // Volume = (response.Amount).ToString().ToDecimal(),
 
@@ -2065,7 +2058,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
                     // при покупке комиссия берется с монеты и объем уменьшается и появляются лишние знаки после запятой
-                    decimal preVolume = myTrade.Side == Side.Sell ? response.Amount.ToDecimal() : response.Amount.ToDecimal() - response.Fee.ToDecimal();
+                    decimal preVolume = myTrade.Side == Side.Sell ? response.ExecAmount.ToDecimal() : response.ExecAmount.ToDecimal() - response.Fee.ToDecimal();
 
                     myTrade.Volume = GetVolumeForMyTrade(response.Symbol, preVolume);
 
