@@ -32,6 +32,8 @@ using WebSocket = WebSocket4Net.WebSocket;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
+using OsEngine.Market.Servers.BitMax;
+using System.Security.Policy;
 
 
 
@@ -107,8 +109,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
                 _apiPath = "v2/platform/status";
 
+
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                var response = ExecuteRequest(_apiPath, null);
+                var response = ExecuteRequest(_apiPath);
+
 
                 // Если ответ успешный, обновляем позиции
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -116,6 +120,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     // Выводим тело ответа
                     string responseBody = response.Content;
                     CreateWebSocketConnection();
+                   
                 }
 
 
@@ -194,7 +199,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         private string _baseUrl = "https://api.bitfinex.com";
 
 
-        string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString(); //берет время сервера без учета локального
+       // string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).ToString(); //берет время сервера без учета локального
 
         #endregion
 
@@ -223,7 +228,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 _apiPath = "v2/tickers?symbols=ALL";
             
-                var response = ExecuteRequest(_apiPath, null);
+
+                var response = ExecuteRequest(_apiPath);
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -274,7 +280,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                         security.Add(ticker);
 
                     }
-
+                    Thread.Sleep(2000);
                     UpdateSecurity(jsonResponse);////////надо или нет
                 }
 
@@ -363,6 +369,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Вызываем событие обновления списка активов
             SecurityEvent(securities);
+
         }
 
 
@@ -406,6 +413,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
 
             CreateQueryPortfolio();
+
         }
         // Метод для создания запроса на получение портфеля
         private void CreateQueryPortfolio()
@@ -413,12 +421,19 @@ namespace OsEngine.Market.Servers.Bitfinex
             // Ожидаем перед выполнением запроса для соблюдения лимитов запросов
             _rateGatePortfolio.WaitToProceed();
 
+            Thread.Sleep(2000);
             try
             {
                 _apiPath = "v2/auth/r/wallets";
-
+                
+              // string nonce = GetNonce();
+              
+               // var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                var response = ExecuteRequest(_apiPath, null);
+                // var response = ExecuteRequest(_apiPath,nonce);
+                var response = ExecuteRequest(_apiPath);
+
+
 
                 // Выводим тело ответа
                 string responseBody = response.Content;
@@ -427,6 +442,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     UpdatePortfolio(responseBody); // Обновляем портфель
+                  /////надо или нет
                     CreateQueryPosition(); // запрос позиций
                 }
                 else
@@ -484,24 +500,31 @@ namespace OsEngine.Market.Servers.Bitfinex
         private void CreateQueryPosition()
         {
             _rateGatePositions.WaitToProceed(); // Ожидаем перед выполнением запроса для соблюдения лимитов запросов
+          
+            Thread.Sleep(2000);
 
             // ПОЛУЧЕНИЕ АКТИВНЫХ ПОЗИЦИЙ
-            //https://api.bitfinex.com/v2/auth/r/orders                            
+            ///*https://api.bitfinex.com/v2/auth/r/orders */                      
 
             try
             {
                 _apiPath = "v2/auth/r/positions";// нулевой массив
-                //_apiPath = "v2/auth/r/orders";
-
+                                                 //_apiPath = "v2/auth/r/orders";1726506680128000
+                                                 //string nonce = GetNonce();
+               // var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                var response = ExecuteRequest(_apiPath, null);
+                //var response = ExecuteRequest(_apiPath,nonce);///////////////////
+               IRestResponse response = ExecuteRequest(_apiPath);
+
+
+                //var response = ExecuteRequest(_apiPath);
 
                 // Если ответ успешный, обновляем позиции
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     // Выводим тело ответа
                     string responseBody = response.Content;
-                    UpdatePosition(responseBody); // Обновляем позиции
+                    UpdatePosition(responseBody); // Обновляем позиции  приходит пустой массив
                 }
                 else
                 {
@@ -604,7 +627,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         /// </summary>
         #region 5 Data 
 
-        private readonly RateGate _rateGateCandleHistory = new RateGate(70, TimeSpan.FromSeconds(300));
+        private readonly RateGate _rateGateCandleHistory = new RateGate(1, TimeSpan.FromSeconds(300));//70
 
         public List<Trade> GetTickDataToSecurity(Security security, DateTime startTime, DateTime endTime, DateTime actualTime)
         {
@@ -734,13 +757,10 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private List<Candle> CreateQueryCandles(string nameSec, string tf, DateTime timeFrom, DateTime timeTo)
         {
+            _rateGateCandleHistory.WaitToProceed();
 
 
-            _rateGateCandleHistory.WaitToProceed(100);
-
-
-
-            DateTime yearBegin = new DateTime(1970, 1, 1);
+        DateTime yearBegin = new DateTime(1970, 1, 1);
 
             //var timeStampStart = timeFrom - yearBegin;
             //var startTimeMilliseconds = timeStampStart.TotalMilliseconds;
@@ -772,7 +792,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             _apiPath = $"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
 
-            var response = ExecuteRequest(_apiPath, null);
+            var response = ExecuteRequest(_apiPath);
 
             try
             {
@@ -1058,7 +1078,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void WebSocketPublic_Opened(object sender, EventArgs e)
         {
-
+            Thread.Sleep(3000);
 
             _socketPublicIsActive = true;//отвечает за соединение
 
@@ -1114,6 +1134,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 if (WebSocketPublicMessage == null)
                 {
                     return;
+                    //continue;
                 }
 
 
@@ -1324,10 +1345,14 @@ namespace OsEngine.Market.Servers.Bitfinex
             SendLogMessage("Connection to private data is Open", LogMessageType.System);
 
         }
+        
 
         private void GenerateAuthenticate()
         {
-            //string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+            // string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+            //string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() .ToString();
+             string nonce = GetNonce();
+
 
             string payload = $"AUTH{nonce}";
             string signature = ComputeHmacSha384(payload, _secretKey);
@@ -1349,6 +1374,8 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void CheckActivationSockets()
         {
+            Thread.Sleep(3000);
+
             if (_socketPublicIsActive == false)
             {
                 return;
@@ -1901,7 +1928,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
 
-             
                 List<List<object>> tradyList = JsonConvert.DeserializeObject<List<List<object>>>(message);
 
                 if (tradyList == null)
@@ -1909,7 +1935,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
 
-                List<BitfinexMyTrade> myTrade1 = new List<BitfinexMyTrade>();
+                List<BitfinexMyTrade> ListMyTrade = new List<BitfinexMyTrade>(); ///надо или нет.,
 
 
                 //for (int i = 0; i < 3; i++)
@@ -2022,7 +2048,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     OrderStateType stateType = GetOrderState(orderData.Status);
 
                     // Игнорируем ордера типа "EXCHANGE MARKET" и активные
-                    if (orderData.OrderType.Equals("EXCHANGE MARKET", StringComparison.OrdinalIgnoreCase) && stateType == OrderStateType.Activ)
+                    if (orderData.OrderType.Equals("EXCHANGE LIMIT", StringComparison.OrdinalIgnoreCase) && stateType == OrderStateType.Activ)
                     {
                         continue;
                     }
@@ -2160,6 +2186,24 @@ namespace OsEngine.Market.Servers.Bitfinex
         public void SendOrder(Order order)
         {
             _rateGateSendOrder.WaitToProceed();
+            Thread.Sleep(2000);
+
+            _apiPath = "v2/auth/w/order/submit";
+
+        
+            string typeOrder; // Переменная для хранения типа ордера
+                              
+            string orderSide = "";
+
+            // Условие для определения типа ордера
+            if (order.TypeOrder.ToString() == "Limit")
+            {
+                typeOrder = "EXCHANGE LIMIT";
+            }
+            else
+            {
+                typeOrder = "EXCHANGE MARKET";
+            }
 
 
             BitfinexOrderData data = new BitfinexOrderData
@@ -2174,21 +2218,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                 MtsUpdate = order.TimeDone.ToString(),
                 // Id= order.NumberMarket
             };
-
-            _apiPath = "v2/auth/w/order/submit";
-            string typeOrder; // Переменная для хранения типа ордера
-                              //  decimal orderSide = 0;
-            string orderSide = "";
-
-            // Условие для определения типа ордера
-            if (order.TypeOrder.ToString() == "Limit")
-            {
-                typeOrder = "EXCHANGE LIMIT";
-            }
-            else
-            {
-                typeOrder = "EXCHANGE MARKET";
-            }
 
             decimal amount;
 
@@ -2218,11 +2247,43 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Сериализуем объект тела в JSON
 
-            //  string bodyJson = JsonConvert.SerializeObject(body);
-
             string bodyJson = JsonSerializer.Serialize(body);
 
-            var response = ExecuteRequest(_apiPath, bodyJson);
+            // Создаем nonce как текущее время в миллисекундах
+            //  string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+
+            // Создаем строку для подписи
+            //string signature = $"/api/{_apiPath}{nonce}{bodyJson}";
+
+
+            //// Вычисляем подпись с использованием HMACSHA384
+            //string sig = ComputeHmacSha384(_secretKey, signature);
+
+            //// // Создаем клиента RestSharp
+            //var client = new RestClient(_baseUrl);
+
+            //// Создаем запрос типа POST
+            //var request = new RestRequest(_apiPath, Method.POST);
+
+            //// Добавляем заголовки
+            //request.AddHeader("accept", "application/json");
+            //request.AddHeader("bfx-nonce", nonce);
+            //request.AddHeader("bfx-apikey", _publicKey);
+            //request.AddHeader("bfx-signature", sig);
+
+            //// Добавляем тело запроса в формате JSON
+            //request.AddJsonBody(body); //
+
+
+            //// Отправляем запрос и получаем ответ
+            //var response = client.Execute(request);
+
+            // string nonce = GetNonce();
+
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
+            var response = ExecuteRequest(_apiPath,nonce,bodyJson);
+           // var response = ExecuteRequest(_apiPath, bodyJson);
 
             try
             {
@@ -2254,7 +2315,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     //{
                     //    // Извлечение нужных элементов
                         var dataJson = responseArray[4].ToString();
-                        string status = jsonArray[4][0][13].ToString();
+                       // string status = jsonArray[4][0][13].ToString();
 
                         //string status = responseArray[6].ToString();
                         string text = responseArray[7].ToString();
@@ -2269,16 +2330,16 @@ namespace OsEngine.Market.Servers.Bitfinex
                             //Cid = Convert.ToString(orders[2]),
                             Id = orders[0].ToString(),
                             Symbol = orders[3].ToString(),
+                            Status = orders[13].ToString()
                         };
+                    OrderStateType stateType = GetOrderState(orderData.Status);
+                   
+                      order.NumberMarket = orderData.Id;
+                 
+                      order.State = stateType; ///////////надо или нет
 
-                        order.NumberMarket = orderData.Id;
 
-                        /* order.State = status;*////////////надо или нет
-
-
-                        //Order order = ConvertToOsEngineOrder(orderData, PortfolioName);
-
-                        SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{text}", LogMessageType.Trade);
+                    SendLogMessage($"Order num {order.NumberMarket} on exchange.{text}", LogMessageType.Trade);
                         //  SendLogMessage($"Order num {order.NumberMarket} on exchange.{order.State},{text}", LogMessageType.System);
 
                    // }
@@ -2321,10 +2382,13 @@ namespace OsEngine.Market.Servers.Bitfinex
                 all = 1  //1 отменить все ордера Идентификатор ордера для отмены
             };
 
+
             string bodyJson = JsonSerializer.Serialize(body);
 
-            var response = ExecuteRequest(_apiPath, bodyJson);
+            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
+            // var response = ExecuteRequest(_apiPath,nonce,bodyJson);
+            var response = ExecuteRequest(_apiPath, bodyJson);
 
             if (response == null)
             {
@@ -2376,6 +2440,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 return;
             }
+
+           
             long orderId = Convert.ToInt64(order.NumberMarket);
 
             // Формирование тела запроса с указанием ID ордера
@@ -2383,12 +2449,14 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 id = orderId // Идентификатор ордера для отмены
             };
-        
+
             // Сериализуем объект тела в JSON
 
+            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
             string bodyJson = JsonSerializer.Serialize(body);
 
+            //var response = ExecuteRequest(_apiPath, nonce,bodyJson);
             var response = ExecuteRequest(_apiPath, bodyJson);
 
             try
@@ -2446,8 +2514,9 @@ namespace OsEngine.Market.Servers.Bitfinex
         private RateGate rateGateChangePriceOrder = new RateGate(1, TimeSpan.FromMilliseconds(300));
 
 
-        public void ChangeOrderPrice(Order order, decimal newPrice)
+        public void ChangeOrderPrice(Order order, decimal Oldprice)
         {
+           // ou - req", //TYPE
             // post https://api.bitfinex.com/v2/auth/w/order/update/////// НЕ ТО?
 
             rateGateChangePriceOrder.WaitToProceed();
@@ -2465,13 +2534,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                 var body = new
                 {
                     id = order.NumberMarket,  // Идентификатор ордера
-                    price = newPrice.ToString(), // Новая цена
+                    price = Oldprice.ToString(), // Новая цена
                                                  // amount = order.Volume.ToString()// новый объем
                 };
+                string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
                 string bodyJson = JsonSerializer.Serialize(body);
+              //  var response = ExecuteRequest(_apiPath, nonce,bodyJson);
                 var response = ExecuteRequest(_apiPath, bodyJson);
-
 
                 // Количество оставшегося объема ордера
                 int qty = Convert.ToInt32(order.Volume - order.VolumeExecute);
@@ -2482,20 +2552,24 @@ namespace OsEngine.Market.Servers.Bitfinex
                     SendLogMessage("Can't change price for the order. It is not in Active state", LogMessageType.Error);
                     return;
                 }
-
-                // Отправляем запрос и получаем ответ
-                //var response = client.Execute(request);
-
-
-
+                if (order.State == OrderStateType.Cancel)//если ордер активный можно снять
+                {
+                    return;
+                }
+               
+                // if(order.State == OrderStateType.Activ)
+             
                 if (response.StatusCode == HttpStatusCode.OK)
                 {  // Выводим тело ответа
                     string responseBody = response.Content;
 
-                    order.Price = newPrice;
+                    string newPrice = responseBody;
+                       // ПЕРЕДЕЛАТЬ!!!!!!!!!
+                    //order.Price = newPrice;
 
-                    SendLogMessage("Order change price. New price: " + newPrice
-                      + "  " + order.SecurityNameCode, LogMessageType.Trade);//LogMessageType.System
+
+                    //SendLogMessage("Order change price. New price: " + newPrice
+                    //  + "  " + order.SecurityNameCode, LogMessageType.Trade);//LogMessageType.System
 
                 }
                 else
@@ -2544,9 +2618,10 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Логика получения данных и заполнения orderFromExchange
 
+            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
             _apiPath = "v2/auth/r/orders";
-            var response = ExecuteRequest(_apiPath, null);
+            var response = ExecuteRequest(_apiPath, nonce);
 
             try
             {
@@ -2700,6 +2775,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 id = numberMarket
 
             };
+            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
 
             // Сериализуем объект тела в JSON
@@ -2707,8 +2783,10 @@ namespace OsEngine.Market.Servers.Bitfinex
             // string bodyJson = JsonConvert.SerializeObject(body);
             string bodyJson = JsonSerializer.Serialize(body);
 
+
             // Отправляем запрос на сервер Bitfinex и получаем ответ
-            var response = ExecuteRequest(_apiPath, bodyJson);
+            //var response = ExecuteRequest(_apiPath,nonce,bodyJson);
+            var response = ExecuteRequest(_apiPath,  bodyJson);
 
             // Выводим тело ответа
             string responseBody = response.Content;
@@ -2771,6 +2849,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 symbol = security
             };
 
+           // string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
             // Сериализуем объект тела в JSON
 
@@ -2781,7 +2860,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                var response = ExecuteRequest(_apiPath, bodyJson);
+                var response = ExecuteRequest(_apiPath,bodyJson);
 
                 // Выводим тело ответа
                 string responseBody = response.Content;
@@ -2814,15 +2893,34 @@ namespace OsEngine.Market.Servers.Bitfinex
             throw new NotImplementedException();
         }
 
+        //public IRestResponse ExecuteRequestWithDelay(string apiPath, string body = null)
+        //{ // Пауза между запросами
+        //    Thread.Sleep(2000); // Задержка 2 секунды
+
+        //    // Ваш код для создания и выполнения запроса
+        // return ExecuteRequest(apiPath, body);
+
+        //}
+
 
 
 
         // Метод для выполнения запросов GET или POST в зависимости от параметра
-        public IRestResponse ExecuteRequest(string apiPath, string body = null)
+        public IRestResponse ExecuteRequest(string apiPath, string nonce = null,string body = null)
         {
             string method;
             // Генерация уникального идентификатора запроса (nonce)
-            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+            //string nonce = GetNonce();
+
+            // nonce = GetNonce();
+
+            if (nonce == null)
+            {
+                nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
+                //nonce = GetNonce();
+            }
+
+
 
             // Если apiPath содержит слово "auth", то устанавливаем метод как POST
             if (apiPath.ToLower().Contains("auth"))
@@ -2854,7 +2952,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Выбираем тип запроса
             RestRequest request = new RestRequest(apiPath, method.Equals("GET", StringComparison.OrdinalIgnoreCase) ? Method.GET : Method.POST);
-
+  
             // Добавляем заголовки
             request.AddHeader("accept", "application/json");
             request.AddHeader("bfx-nonce", nonce);
@@ -2915,6 +3013,43 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+
+
+
+            private long _lastNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;
+           
+           private readonly object _lock = new object();
+
+
+        // Начальное значение nonce на основе текущего времени
+
+       
+
+
+        public string GetNonce()
+            {
+            Thread.Sleep(1000);
+
+            lock (_lock)
+                {
+                  
+                var currentNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;
+
+                // Если новое значение меньше или равно предыдущему, увеличиваем его
+                if (currentNonce <= _lastNonce)
+                {
+                    currentNonce = _lastNonce + 1;
+                }
+
+                // Сохраняем новое значение
+                _lastNonce = currentNonce;
+
+                // Возвращаем значение в виде строки
+                return currentNonce.ToString();
+               
+                }
+            }
+       
 
         //public void UnsubscribeFromChannel(int channelId)//отписаться от канала
         //{
