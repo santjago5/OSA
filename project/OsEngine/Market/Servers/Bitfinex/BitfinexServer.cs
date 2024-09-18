@@ -19,7 +19,6 @@ using Security = OsEngine.Entity.Security;
 using BitfinexSecurity = OsEngine.Market.Servers.Bitfinex.Json.BitfinexSecurity;
 using Candle = OsEngine.Entity.Candle;
 using Method = RestSharp.Method;
-using SuperSocket.ClientEngine;
 using Trade = OsEngine.Entity.Trade;
 using MarketDepth = OsEngine.Entity.MarketDepth;
 using System.Text.Json;
@@ -32,8 +31,7 @@ using WebSocket = WebSocket4Net.WebSocket;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
-using OsEngine.Market.Servers.BitMax;
-using System.Security.Policy;
+
 
 
 
@@ -199,7 +197,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         private string _baseUrl = "https://api.bitfinex.com";
 
 
-       // string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).ToString(); //берет время сервера без учета локального
+       //string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()* 1000).ToString(); //берет время сервера без учета локального
 
         #endregion
 
@@ -428,10 +426,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                 
               // string nonce = GetNonce();
               
-               // var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
+                var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                // var response = ExecuteRequest(_apiPath,nonce);
-                var response = ExecuteRequest(_apiPath);
+                 var response = ExecuteRequest(_apiPath,nonce);
+               // var response = ExecuteRequest(_apiPath);
 
 
 
@@ -501,7 +499,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             _rateGatePositions.WaitToProceed(); // Ожидаем перед выполнением запроса для соблюдения лимитов запросов
           
-            Thread.Sleep(2000);
+           
 
             // ПОЛУЧЕНИЕ АКТИВНЫХ ПОЗИЦИЙ
             ///*https://api.bitfinex.com/v2/auth/r/orders */                      
@@ -511,10 +509,10 @@ namespace OsEngine.Market.Servers.Bitfinex
                 _apiPath = "v2/auth/r/positions";// нулевой массив
                                                  //_apiPath = "v2/auth/r/orders";1726506680128000
                                                  //string nonce = GetNonce();
-               // var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
+                var nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
                 // Отправляем запрос на сервер Bitfinex и получаем ответ
-                //var response = ExecuteRequest(_apiPath,nonce);///////////////////
-               IRestResponse response = ExecuteRequest(_apiPath);
+                var response = ExecuteRequest(_apiPath,nonce);///////////////////
+            //   IRestResponse response = ExecuteRequest(_apiPath);
 
 
                 //var response = ExecuteRequest(_apiPath);
@@ -537,6 +535,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 // Логируем исключение в случае ошибки
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
+            Thread.Sleep(2000);
         }
 
         // Метод для обновления позиций на основе полученных данных
@@ -950,7 +949,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         /// Создание вебсокет соединения. 
         /// </summary>
         #region  6 WebSocket creation
-
+       // ConcurrentQueue<string>;
         private WebSocket _webSocketPublic;
         private WebSocket _webSocketPrivate;
 
@@ -1727,8 +1726,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                
                     // "[11086,"tu",[1657562091,1726074346694,38.96758011,0.15345]]"   
 
-
-
                 }
 
                 catch (Exception exception)
@@ -2186,7 +2183,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         public void SendOrder(Order order)
         {
             _rateGateSendOrder.WaitToProceed();
-            Thread.Sleep(2000);
+         
 
             _apiPath = "v2/auth/w/order/submit";
 
@@ -2248,41 +2245,42 @@ namespace OsEngine.Market.Servers.Bitfinex
             // Сериализуем объект тела в JSON
 
             string bodyJson = JsonSerializer.Serialize(body);
+            //string bodyJson = JsonConvert.SerializeObject(body);
 
-            // Создаем nonce как текущее время в миллисекундах
-            //  string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-
-
-            // Создаем строку для подписи
-            //string signature = $"/api/{_apiPath}{nonce}{bodyJson}";
+           // Создаем nonce как текущее время в миллисекундах
+              string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()* 1000).ToString();
 
 
-            //// Вычисляем подпись с использованием HMACSHA384
-            //string sig = ComputeHmacSha384(_secretKey, signature);
-
-            //// // Создаем клиента RestSharp
-            //var client = new RestClient(_baseUrl);
-
-            //// Создаем запрос типа POST
-            //var request = new RestRequest(_apiPath, Method.POST);
-
-            //// Добавляем заголовки
-            //request.AddHeader("accept", "application/json");
-            //request.AddHeader("bfx-nonce", nonce);
-            //request.AddHeader("bfx-apikey", _publicKey);
-            //request.AddHeader("bfx-signature", sig);
-
-            //// Добавляем тело запроса в формате JSON
-            //request.AddJsonBody(body); //
+            //Создаем строку для подписи
+            string signature = $"/api/{_apiPath}{nonce}{bodyJson}";
 
 
-            //// Отправляем запрос и получаем ответ
-            //var response = client.Execute(request);
+            // Вычисляем подпись с использованием HMACSHA384
+            string sig = ComputeHmacSha384(_secretKey, signature);
+
+            // // Создаем клиента RestSharp
+            var client = new RestClient(_baseUrl);
+
+            // Создаем запрос типа POST
+            var request = new RestRequest(_apiPath, Method.POST);
+
+            // Добавляем заголовки
+            request.AddHeader("accept", "application/json");
+            request.AddHeader("bfx-nonce", nonce);
+            request.AddHeader("bfx-apikey", _publicKey);
+            request.AddHeader("bfx-signature", sig);
+
+            // Добавляем тело запроса в формате JSON
+            request.AddJsonBody(body); //
+
+
+            // Отправляем запрос и получаем ответ
+            var response = client.Execute(request);
 
             // string nonce = GetNonce();
 
-            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
-            var response = ExecuteRequest(_apiPath,nonce,bodyJson);
+         
+           // var response = ExecuteRequest(_apiPath,nonce,bodyJson);
            // var response = ExecuteRequest(_apiPath, bodyJson);
 
             try
@@ -2385,10 +2383,10 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             string bodyJson = JsonSerializer.Serialize(body);
 
-            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
             // var response = ExecuteRequest(_apiPath,nonce,bodyJson);
-            var response = ExecuteRequest(_apiPath, bodyJson);
+            var response = ExecuteRequest(_apiPath,nonce ,bodyJson);
 
             if (response == null)
             {
@@ -2452,7 +2450,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Сериализуем объект тела в JSON
 
-            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString(); 
 
             string bodyJson = JsonSerializer.Serialize(body);
 
@@ -2537,7 +2535,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     price = Oldprice.ToString(), // Новая цена
                                                  // amount = order.Volume.ToString()// новый объем
                 };
-                string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
                 string bodyJson = JsonSerializer.Serialize(body);
               //  var response = ExecuteRequest(_apiPath, nonce,bodyJson);
@@ -2618,7 +2616,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             // Логика получения данных и заполнения orderFromExchange
 
-            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
             _apiPath = "v2/auth/r/orders";
             var response = ExecuteRequest(_apiPath, nonce);
@@ -2775,7 +2773,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 id = numberMarket
 
             };
-            string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
 
 
             // Сериализуем объект тела в JSON
@@ -2849,7 +2847,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 symbol = security
             };
 
-           // string nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            //  string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()* 1000).ToString();
 
             // Сериализуем объект тела в JSON
 
@@ -2913,11 +2911,12 @@ namespace OsEngine.Market.Servers.Bitfinex
             //string nonce = GetNonce();
 
             // nonce = GetNonce();
-
+       
             if (nonce == null)
             {
-                nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 10000).ToString();
-                //nonce = GetNonce();
+               // nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+               
+                nonce = GetNonce();
             }
 
 
@@ -3016,7 +3015,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-            private long _lastNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;
+       private long _lastNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;
            
            private readonly object _lock = new object();
 
@@ -3028,12 +3027,11 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public string GetNonce()
             {
-            Thread.Sleep(1000);
-
+ 
             lock (_lock)
                 {
                   
-                var currentNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;
+                var currentNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000;//если ставить 1000 не работает
 
                 // Если новое значение меньше или равно предыдущему, увеличиваем его
                 if (currentNonce <= _lastNonce)
@@ -3048,6 +3046,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 return currentNonce.ToString();
                
                 }
+
             }
        
 
