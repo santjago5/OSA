@@ -2393,11 +2393,46 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             string bodyJson = JsonSerializer.Serialize(body);
 
-            string nonce = GetNonce();
-      
-            var response = ExecuteRequest(_apiPath,nonce ,bodyJson);
+            // string nonce = GetNonce();
 
-            if (response == null)
+            //  var response = ExecuteRequest(_apiPath,nonce ,bodyJson);
+       
+            //string bodyJson = JsonConvert.SerializeObject(body);
+
+
+            // string nonce = GetNonce();
+
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+
+            //Создаем строку для подписи
+            string signature = $"/api/{_apiPath}{nonce}{bodyJson}";
+
+
+            // Вычисляем подпись с использованием HMACSHA384
+            string sig = ComputeHmacSha384(_secretKey, signature);
+
+            // // Создаем клиента RestSharp
+            var client = new RestClient(_baseUrl);
+
+            //// Создаем запрос типа POST
+            var request = new RestRequest(_apiPath, Method.POST);
+
+            //// Добавляем заголовки
+            request.AddHeader("accept", "application/json");
+            request.AddHeader("bfx-nonce", nonce);
+            request.AddHeader("bfx-apikey", _publicKey);
+            request.AddHeader("bfx-signature", sig);
+
+            // Добавляем тело запроса в формате JSON
+            request.AddJsonBody(body); //
+
+
+            // Отправляем запрос и получаем ответ
+            var response = client.Execute(request);
+
+       
+
+           if (response == null)
             {
                 return;
             }
@@ -2419,7 +2454,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                     else
                     {
-                        SendLogMessage($" {response}", LogMessageType.Error);
+                        SendLogMessage($" {response.Content}", LogMessageType.Error);
                     }
                 }
             }
@@ -2430,11 +2465,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         }
 
-
         private RateGate rateGateCancelAllOrder = new RateGate(1, TimeSpan.FromMilliseconds(350));
-
-
-
 
         public void CancelOrder(Order order)
         {
@@ -2464,7 +2495,35 @@ namespace OsEngine.Market.Servers.Bitfinex
             string bodyJson = JsonSerializer.Serialize(body);
 
             //var response = ExecuteRequest(_apiPath, nonce,bodyJson);
-            var response = ExecuteRequest(_apiPath, bodyJson);
+            // var response = ExecuteRequest(_apiPath, bodyJson);
+
+            string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
+
+            //Создаем строку для подписи
+            string signature = $"/api/{_apiPath}{nonce}{bodyJson}";
+
+
+            // Вычисляем подпись с использованием HMACSHA384
+            string sig = ComputeHmacSha384(_secretKey, signature);
+
+            // // Создаем клиента RestSharp
+            var client = new RestClient(_baseUrl);
+
+            //// Создаем запрос типа POST
+            var request = new RestRequest(_apiPath, Method.POST);
+
+            //// Добавляем заголовки
+            request.AddHeader("accept", "application/json");
+            request.AddHeader("bfx-nonce", nonce);
+            request.AddHeader("bfx-apikey", _publicKey);
+            request.AddHeader("bfx-signature", sig);
+
+            // Добавляем тело запроса в формате JSON
+            request.AddJsonBody(body); //
+
+
+            // Отправляем запрос и получаем ответ
+            var response = client.Execute(request);
 
             try
             // [0,"n",[1575291219660,"oc-req",null,null,[1185815100,null,1575289350475,"tETHUSD",1575289351944,1575289447644,-3,-3,"LIMIT","LIMIT",null,null,0,"ACTIVE",null,null,240,0,0,0,null,null,null,0,0,null,null,null,"API>BFX",null,null,null],null,"SUCCESS","Submitted for cancellation; waiting for confirmation (ID: 1185815100)."]]
@@ -2498,7 +2557,6 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
 
                 // MyOrderEvent(order);////// надо или нет
-
 
             }
             catch (Exception exception)
@@ -2903,17 +2961,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             throw new NotImplementedException();
         }
 
-        //public IRestResponse ExecuteRequestWithDelay(string apiPath, string body = null)
-        //{ // Пауза между запросами
-        //    Thread.Sleep(2000); // Задержка 2 секунды
-
-        //    // Ваш код для создания и выполнения запроса
-        // return ExecuteRequest(apiPath, body);
-
-        //}
-
-
-
+       
 
         // Метод для выполнения запросов GET или POST в зависимости от параметра
         public IRestResponse ExecuteRequest(string apiPath, string nonce = null,string body = null)
@@ -2933,7 +2981,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
 
-            // Если apiPath содержит слово "auth", то устанавливаем метод как POST
+            // Если apiPath содержит слово "auth", то устанавливаем метод  POST
             if (apiPath.ToLower().Contains("auth"))
             {
                 method = "POST";
