@@ -100,7 +100,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public bool IsCanChangeOrderPrice
         {
-            get { return false; }
+            get { return true; }//false
         }
 
         public TimeFramePermission TradeTimeFramePermission
@@ -150,27 +150,49 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public bool ManuallyClosePositionOnBoard_IsOn
         {
-            get { return false; }
+            get { return true; }
         }
 
         public string[] ManuallyClosePositionOnBoard_ValuesForTrimmingName
         {
-            get { return null; }
+            get
+            {
+                string[] values = new string[]
+                {
+                    "LONG",
+                    "SHORT",
+                    "BOTH"////
+                };
+
+                return values;
+            }
         }
 
         public string[] ManuallyClosePositionOnBoard_ExceptionPositionNames
         {
-            get { return null; }
+            get
+            {
+                string[] values = new string[]
+                {
+                    "USD",
+                    "EUR",
+                    "GBP",
+                    "JPY"
+                };
+
+                return values;
+            }
         }
+
 
         public bool CanQueryOrdersAfterReconnect
         {
-            get { return false; }
+            get { return true; }
         }
 
         public bool CanQueryOrderStatus
         {
-            get { return false; }
+            get { return true; }
         }
 
         #endregion
