@@ -9,8 +9,6 @@ namespace OsEngine.Market.Servers.Bitfinex.Json
 {
     public class BitfinexMyTrade
     {
-       
-      
         public string Id;                   //402088407, //ID
         public string Symbol;               //tETHUST", //SYMBOL
         public string MtsCreate;                  //1574963975602, //MTS
