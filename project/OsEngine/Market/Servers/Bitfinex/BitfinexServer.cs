@@ -235,25 +235,23 @@ namespace OsEngine.Market.Servers.Bitfinex
                     {
                         List<object> item = securityList[i];
 
-                        BitfinexSecurity ticker = new BitfinexSecurity
-                       {
-                            Symbol = item[0].ToString(),
-                            Bid = ConvertScientificNotation(item[1].ToString()),
-                            BidSize = ConvertScientificNotation(item[2].ToString()),
-                            Ask = ConvertScientificNotation(item[3].ToString()),
-                            AskSize = ConvertScientificNotation(item[4].ToString()),
-                            DailyChange = ConvertScientificNotation(item[5].ToString()),
-                            DailyChangeRelative = ConvertScientificNotation(item[6].ToString()), //double.Parse(item[7].ToString(), System.Globalization.NumberStyles.Float).ToString(),
-                            LastPrice =ConvertScientificNotation(item[7].ToString()),
-                            Volume = ConvertScientificNotation(item[8].ToString()),
-                            High = ConvertScientificNotation(item[9].ToString()),
-                            Low = ConvertScientificNotation(item[10].ToString())
+                        BitfinexSecurity ticker = new BitfinexSecurity();
 
-                        };
+                        ticker.Symbol = item[0].ToString();
+                        ticker.Bid = ConvertScientificNotation(item[1].ToString());
+                        ticker.BidSize = ConvertScientificNotation(item[2].ToString());
+                        ticker.Ask = ConvertScientificNotation(item[3].ToString());
+                        ticker.AskSize = ConvertScientificNotation(item[4].ToString());
+                        ticker.DailyChange = ConvertScientificNotation(item[5].ToString());
+                        ticker.DailyChangeRelative = ConvertScientificNotation(item[6].ToString()); //double.Parse(item[7].ToString(), System.Globalization.NumberStyles.Float).ToString(),
+                        ticker.LastPrice =ConvertScientificNotation(item[7].ToString());
+                        ticker.Volume = ConvertScientificNotation(item[8].ToString());
+                        ticker.High = ConvertScientificNotation(item[9].ToString());
+                        ticker.Low = ConvertScientificNotation(item[10].ToString());
 
                         security.Add(ticker);
                     }
-                    Thread.Sleep(2000);
+                    
 
                     UpdateSecurity(jsonResponse);
                 }
@@ -302,7 +300,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     continue;
                 }
 
-                Security newSecurity = new Security
+                Security newSecurity = new Security()
                 {
                     Exchange = ServerType.Bitfinex.ToString(),  
                     Name = symbol,        
@@ -365,7 +363,6 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                // string nonce = GetNonce();
 
-                Thread.Sleep(1000);
 
                 //Создаем nonce как текущее время в миллисекундах
                  string nonce = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000).ToString();
@@ -449,7 +446,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                string _apiPath = "v2/auth/r/positions";// нулевой массив
 
-                Thread.Sleep(1000);
+              
 
                 string signature = $"/api/{_apiPath}{nonce}";
 
@@ -480,7 +477,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 SendLogMessage(exception.ToString(), LogMessageType.Error);
             }
-            Thread.Sleep(1000);
+            
         }
 
         private void UpdatePosition(string json)
@@ -918,7 +915,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         private void WebSocketPublic_Opened(object sender, EventArgs e)
         {
-            Thread.Sleep(3000);
+            Thread.Sleep(2000);
 
             _socketPublicIsActive = true;//отвечает за соединение
 
@@ -1489,7 +1486,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 }
                 catch (Exception exception)
                 {
-                    Thread.Sleep(2000);
+                    
                     SendLogMessage(exception.ToString(), LogMessageType.Error);
                 }
             }
