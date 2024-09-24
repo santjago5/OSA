@@ -632,8 +632,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             //string endTime = Convert.ToInt64(endTimeMilliseconds).ToString();
 
 
-            Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
-            Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
+            //Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
+            //Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
 
 
             ///
@@ -2703,7 +2703,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    //}
         //    // Формирование строки для подписи в зависимости от типа запроса
         //    string signature = method.Equals("GET", StringComparison.OrdinalIgnoreCase) ?
-        //        $"/api/{apiPath}{nonce}" :
+        //        $"/api/{apiPath}" :
         //        $"/api/{apiPath}{nonce}{body}";
 
 
@@ -2733,189 +2733,222 @@ namespace OsEngine.Market.Servers.Bitfinex
         //    return client.Execute(request);
         //}
 
-        ////////////////////////////////////////////////////////
-
-        //private void UnsubscribeFromAllWebSockets()
+        ////////////////////////////////////////////////////////////отписаться от всех подписок
+        //public class BitfinexUnsubscribe
         //{
-        //    if (_webSocketPublic == null || _webSocketPrivate == null)
-        //    { return; }
+        //    // Список идентификаторов активных каналов
+        //    private List<int> channelIds = new List<int>();
 
-        //    for (int i = 0; i < _subscribedSecurities.Count; i++)
-        //    {
-        //        string securityName = _subscribedSecurities[i];
-
-        //        _webSocketPublic.Send($"{{\"event\":\"unsubscribe\", \"chanId\": \"{chanId}\"}}"); 
-
-        //        _webSocketPrivate.Send($"{{\"event\":\"unsubscribe\", \"chanId\": \"{chanId}\"}}");
-        //    }
-        //}
-
-        //public void UnsubscribeFromChannel(int channelId)//отписаться от канала
-        //{
-        //    var unsubscribeMessage = new
-        //    {
-        //        @event = "unsubscribe",
-        //        chanId = channelId
-        //    };
-
-        //    string message = JsonConvert.SerializeObject(unsubscribeMessage);
-
-        //    // Отправка сообщения через WebSocket
-        //    webSocket.Send(message);
-        //}
-
-
-        //private OrderStateType GetOrderState(string orderStateResponse)
-        //{
-        //    var stateType = orderStateResponse switch
-        //    {
-        //        "ACTIVE" => OrderStateType.Activ,
-        //        "EXECUTED" => OrderStateType.Done,
-        //        "REJECTED" => OrderStateType.Fail,
-        //        "CANCELED" => OrderStateType.Cancel,
-        //        "PARTIALLY FILLED" => OrderStateType.Patrial,
-        //        _ => OrderStateType.None,
-        //    };
-        //    return stateType;
-        //}
-
-        //else if (baseMessage.status == "CANCELED")
-        //{
-        //    lock (_changePriceOrdersArrayLocker)
-        //    {
-        //        DateTime now = DateTime.UtcNow;
-        //        for (int i = 0; i < _changePriceOrders.Count; i++)
-        //        {
-        //            if (_changePriceOrders[i].TimeChangePriceOrder.AddSeconds(2) < now)
-        //            {
-        //                _changePriceOrders.RemoveAt(i);
-        //                i--;
-        //                continue;
-        //            }
-
-        //            //if (_changePriceOrders[i].MarketId == order.NumberMarket)
-        //            //{
-        //            //    return null;
-        //            //}
-        //        }
-        //    }
-
-        //    if (string.IsNullOrEmpty(baseMessage.amount))
-        //    {
-        //        order.State = OrderStateType.Cancel;
-        //    }
-        //    else if (baseMessage.amount == "0")
-        //    {
-        //        order.State = OrderStateType.Cancel;
-        //    }
-        //    else
+        //    // Метод для отписки от всех событий
+        //    public void UnsubscribeAll()
         //    {
         //        try
         //        {
-        //            decimal volFilled = baseMessage.amount.ToDecimal();
+        //            // Проходим по каждому идентификатору канала и отправляем команду отписки
+        //            for (int i = 0; i < channelIds.Count; i++)
+        //            {
+        //                int channelId = channelIds[i];
 
-        //            if (volFilled > 0)
-        //            {
-        //                order.State = OrderStateType.Done;
+        //                // Формируем команду отписки для канала
+        //                string unsubscribeMessage = $"{{\"event\": \"unsubscribe\", \"chanId\": {channelId}}}";
+
+        //                // Отправляем команду через WebSocket
+        //                SendWebSocketMessage(unsubscribeMessage);
         //            }
-        //            else
-        //            {
-        //                order.State = OrderStateType.Cancel;
-        //            }
+
+        //            // Очищаем список после отписки от всех каналов
+        //            channelIds.Clear();
         //        }
-        //        catch
+        //        catch (Exception exception)
         //        {
-        //            order.State = OrderStateType.Cancel;
+        //            SendLogMessage(exception.ToString(), LogMessageType.Error);
         //        }
         //    }
-        //}
-
-        //return order;
-        //                }
-
-        //if (securityList[i].Contains("e") || securityList[i].Contains("E"))
-        //              {
-
-        //    // Преобразуем строку в число, используя double.Parse
-        //    double scientificNumber = double.Parse(item[i].ToString(), System.Globalization.NumberStyles.Float);
-
-        // }
 
 
+            ////////////////////////////////////////////////////////
 
-        ///////////////////////////////////////////////////////////////
-        ///  // PositionOnBoard position = new PositionOnBoard
-        //            {
-        //                PortfolioName = portfolios[i].Type,
-        //                ValueBegin = availableBalance,
-        //                ValueCurrent = availableBalance,
-        //                ValueBlocked = unsettledInterest,
-        //                SecurityNameCode = portfolios[i].Currency
-        //            };
+            //private void UnsubscribeFromAllWebSockets()
+            //{
+            //    if (_webSocketPublic == null || _webSocketPrivate == null)
+            //    { return; }
 
+            //    for (int i = 0; i < _subscribedSecurities.Count; i++)
+            //    {
+            //        string securityName = _subscribedSecurities[i];
 
+            //        _webSocketPublic.Send($"{{\"event\":\"unsubscribe\", \"chanId\": \"{chanId}\"}}"); 
 
+            //        _webSocketPrivate.Send($"{{\"event\":\"unsubscribe\", \"chanId\": \"{chanId}\"}}");
+            //    }
+            //}
 
-        //private void UpdatePortfolio(string message/*bool isUpdateValueBeginList<BitfinexPortfolioRest> portfolios*/)
-        //{
-        //    try
-        //    {
-        //        var jsonDoc = JsonDocument.Parse(message);
-        //        var root = jsonDoc.RootElement;
+            //public void UnsubscribeFromChannel(int channelId)//отписаться от канала
+            //{
+            //    var unsubscribeMessage = new
+            //    {
+            //        @event = "unsubscribe",
+            //        chanId = channelId
+            //    };
 
-        //        List<BitfinexPortfolioRest> response = JsonConvert.DeserializeObject<List<BitfinexPortfolioRest>>(message);
+            //    string message = JsonConvert.SerializeObject(unsubscribeMessage);
 
-        //         if (root.ValueKind == JsonValueKind.Array)
-        //        {
-        //            // Handle data messages
-        //            int channelId = root[0].GetInt32();
-        //            string msgType = root[1].GetString();
-
-        //            if (channelId == 0)
-        //            {
-        //                // Wallet messages
-        //                switch (msgType)
-        //                {
-        //                    case "ws":
-        //                        SendLogMessage("Received wallet snapshot", LogMessageType.System);
-        //                       // HandleWalletSnapshot(root[2]);
-        //                        break;
-        //                    case "wu":
-        //                        SendLogMessage("Received wallet update", LogMessageType.System);
-        //                       // HandleWalletUpdate(root[2], response);
-        //                        break;
-        //                }
-        //            }
-        //        }
+            //    // Отправка сообщения через WebSocket
+            //    webSocket.Send(message);
+            //}
 
 
-        /// <summary>
-        /// Проверка вёбсокета на работоспособность путём отправки ему пингов.
-        /// </summary>
-        //private void SendPing(object sender, EventArgs e)// ElapsedEventArgs e)
-        //{
-        //    // Проверяем, инициализирован ли _webSocketPublic и открыт ли он
-        //    if (_webSocketPublic != null && _webSocketPublic.State == WebSocketState.Open)
-        //    {
-        //        string Ping = "{\"event\":\"ping\",\"cid\":1234}";
+            //private OrderStateType GetOrderState(string orderStateResponse)
+            //{
+            //    var stateType = orderStateResponse switch
+            //    {
+            //        "ACTIVE" => OrderStateType.Activ,
+            //        "EXECUTED" => OrderStateType.Done,
+            //        "REJECTED" => OrderStateType.Fail,
+            //        "CANCELED" => OrderStateType.Cancel,
+            //        "PARTIALLY FILLED" => OrderStateType.Patrial,
+            //        _ => OrderStateType.None,
+            //    };
+            //    return stateType;
+            //}
 
-        //        _webSocketPublic.Send(Ping);
-        //    }
-        //    else
-        //    {
-        //       ("WebSocket is not open. Ping not sent.");
-        //    }
+            //else if (baseMessage.status == "CANCELED")
+            //{
+            //    lock (_changePriceOrdersArrayLocker)
+            //    {
+            //        DateTime now = DateTime.UtcNow;
+            //        for (int i = 0; i < _changePriceOrders.Count; i++)
+            //        {
+            //            if (_changePriceOrders[i].TimeChangePriceOrder.AddSeconds(2) < now)
+            //            {
+            //                _changePriceOrders.RemoveAt(i);
+            //                i--;
+            //                continue;
+            //            }
+
+            //            //if (_changePriceOrders[i].MarketId == order.NumberMarket)
+            //            //{
+            //            //    return null;
+            //            //}
+            //        }
+            //    }
+
+            //    if (string.IsNullOrEmpty(baseMessage.amount))
+            //    {
+            //        order.State = OrderStateType.Cancel;
+            //    }
+            //    else if (baseMessage.amount == "0")
+            //    {
+            //        order.State = OrderStateType.Cancel;
+            //    }
+            //    else
+            //    {
+            //        try
+            //        {
+            //            decimal volFilled = baseMessage.amount.ToDecimal();
+
+            //            if (volFilled > 0)
+            //            {
+            //                order.State = OrderStateType.Done;
+            //            }
+            //            else
+            //            {
+            //                order.State = OrderStateType.Cancel;
+            //            }
+            //        }
+            //        catch
+            //        {
+            //            order.State = OrderStateType.Cancel;
+            //        }
+            //    }
+            //}
+
+            //return order;
+            //                }
+
+            //if (securityList[i].Contains("e") || securityList[i].Contains("E"))
+            //              {
+
+            //    // Преобразуем строку в число, используя double.Parse
+            //    double scientificNumber = double.Parse(item[i].ToString(), System.Globalization.NumberStyles.Float);
+
+            // }
 
 
-        //}
+
+            ///////////////////////////////////////////////////////////////
+            ///  // PositionOnBoard position = new PositionOnBoard
+            //            {
+            //                PortfolioName = portfolios[i].Type,
+            //                ValueBegin = availableBalance,
+            //                ValueCurrent = availableBalance,
+            //                ValueBlocked = unsettledInterest,
+            //                SecurityNameCode = portfolios[i].Currency
+            //            };
 
 
 
-        #endregion
+
+            //private void UpdatePortfolio(string message/*bool isUpdateValueBeginList<BitfinexPortfolioRest> portfolios*/)
+            //{
+            //    try
+            //    {
+            //        var jsonDoc = JsonDocument.Parse(message);
+            //        var root = jsonDoc.RootElement;
+
+            //        List<BitfinexPortfolioRest> response = JsonConvert.DeserializeObject<List<BitfinexPortfolioRest>>(message);
+
+            //         if (root.ValueKind == JsonValueKind.Array)
+            //        {
+            //            // Handle data messages
+            //            int channelId = root[0].GetInt32();
+            //            string msgType = root[1].GetString();
+
+            //            if (channelId == 0)
+            //            {
+            //                // Wallet messages
+            //                switch (msgType)
+            //                {
+            //                    case "ws":
+            //                        SendLogMessage("Received wallet snapshot", LogMessageType.System);
+            //                       // HandleWalletSnapshot(root[2]);
+            //                        break;
+            //                    case "wu":
+            //                        SendLogMessage("Received wallet update", LogMessageType.System);
+            //                       // HandleWalletUpdate(root[2], response);
+            //                        break;
+            //                }
+            //            }
+            //        }
+
+
+            /// <summary>
+            /// Проверка вёбсокета на работоспособность путём отправки ему пингов.
+            /// </summary>
+            //private void SendPing(object sender, EventArgs e)// ElapsedEventArgs e)
+            //{
+            //    // Проверяем, инициализирован ли _webSocketPublic и открыт ли он
+            //    if (_webSocketPublic != null && _webSocketPublic.State == WebSocketState.Open)
+            //    {
+            //        string Ping = "{\"event\":\"ping\",\"cid\":1234}";
+
+            //        _webSocketPublic.Send(Ping);
+            //    }
+            //    else
+            //    {
+            //       ("WebSocket is not open. Ping not sent.");
+            //    }
+
+
+            //}
 
 
 
-    }
+            #endregion
+
+
+
+        }
 }
 
 
