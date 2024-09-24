@@ -102,12 +102,13 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
                 string _apiPath = "v2/platform/status";
+                IRestResponse response = ExecuteRequest(_apiPath);
 
-                RestClient client = new RestClient(_baseUrl);
-                RestRequest request = new RestRequest(_apiPath, Method.GET);
-                request.AddHeader("accept", "application/json");
+                //RestClient client = new RestClient(_baseUrl);
+                //RestRequest request = new RestRequest(_apiPath, Method.GET);
+                //request.AddHeader("accept", "application/json");
 
-                IRestResponse response = client.Execute(request);
+                //IRestResponse response = client.Execute(request);
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
