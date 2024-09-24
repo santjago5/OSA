@@ -87,9 +87,6 @@ namespace OsEngine.Market.Servers.Bitfinex
         {
             try
             {
-                _securities.Clear();
-                _portfolios.Clear();
-
                 SendLogMessage("Start Bitfinex Connection", LogMessageType.System);
 
                 _publicKey = ((ServerParameterString)ServerParameters[0]).Value;
@@ -136,7 +133,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             {
                 _securities.Clear();
                 _portfolios.Clear();
-
+             
                 DeleteWebSocketConnection();
             }
             catch (Exception exception)
@@ -251,8 +248,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                         security.Add(ticker);
                     }
-
-
+                  
                     UpdateSecurity(jsonResponse);
                 }
 
@@ -514,7 +510,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         /// Запросы данных по свечкам и трейдам. 
         /// </summary>
         #region 5 Data Candles
-
+       
         private readonly RateGate _rateGateCandleHistory = new RateGate(1, TimeSpan.FromSeconds(300));
 
         public List<Trade> GetTickDataToSecurity(Security security, DateTime startTime, DateTime endTime, DateTime actualTime)
@@ -533,6 +529,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public List<Candle> GetCandleHistory(string nameSec, TimeSpan tf, int CountToLoad, DateTime endTime)
         {
+           
 
             int needToLoadCandles = CountToLoad;
 
@@ -561,7 +558,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                 if (candles.Count != 0)
                 {
-                    endTime = candles[0].TimeStart;
+                    endTime = candles[0].TimeStart;////gthtltkfnm
                 }
 
                 needToLoadCandles -= limit;
@@ -575,7 +572,14 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public List<Candle> GetCandleDataToSecurity(Security security, TimeFrameBuilder timeFrameBuilder, DateTime startTime, DateTime endTime, DateTime actualTime)/////string
         {
-
+            //if (endTime > DateTime.Now ||
+            //   startTime >= endTime ||
+            //   startTime >= DateTime.Now ||
+            //   actualTime > endTime ||
+            //   actualTime > DateTime.Now)
+            //{
+            //    return null;
+            //}
             //if (startTime != actualTime)
             //{
             //    startTime = actualTime;
@@ -583,16 +587,6 @@ namespace OsEngine.Market.Servers.Bitfinex
             if (actualTime < startTime)
             {
                 startTime = actualTime;
-            }
-
-            //if (actualTime > endTime)
-            //{
-            //    return null;
-            //}
-
-            if (startTime > endTime)
-            {
-                return null;
             }
 
             if (endTime > DateTime.UtcNow)
