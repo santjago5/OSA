@@ -161,7 +161,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 {
                     "LONG",
                     "SHORT",
-                    "BOTH"////
+                   
                 };
 
                 return values;
@@ -192,7 +192,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public bool CanQueryOrderStatus
         {
-            get { return true; }
+            get { return false; }/// для чего это
         }
 
         #endregion
