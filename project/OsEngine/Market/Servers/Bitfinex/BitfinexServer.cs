@@ -102,7 +102,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                     return;
                 }
                 string _apiPath = "v2/platform/status";
-                RestResponse response = ExecuteRequest(_apiPath);
+                IRestResponse response = ExecuteRequest(_apiPath);
 
 
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -347,7 +347,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
                  
 
-                RestResponse response = ExecuteRequest(_apiPath);
+                IRestResponse response = ExecuteRequest(_apiPath);
 
 
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -412,7 +412,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             try
             {
                 string _apiPath = "v2/auth/r/positions";// нулевой массив
-                RestResponse response = ExecuteRequest(_apiPath);
+                IRestResponse response = ExecuteRequest(_apiPath);
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -606,7 +606,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             string candle = $"trade:{tf}:{nameSec}";
 
             string _apiPath = $"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
-            RestResponse response = ExecuteRequest(_apiPath);
+            IRestResponse response = ExecuteRequest(_apiPath);
 
             try
             {
@@ -1925,7 +1925,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                 // Сериализуем объект тела в JSON
 
             
-            RestResponse response = ExecuteRequest(_apiPath, bodyJson);
+            IRestResponse response = ExecuteRequest(_apiPath, bodyJson);
            
             try
             {
@@ -2037,7 +2037,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             string bodyJson = JsonSerializer.Serialize(body);
 
-            RestResponse response = ExecuteRequest(_apiPath, bodyJson);
+            IRestResponse response = ExecuteRequest(_apiPath, bodyJson);
 
             
 
@@ -2097,7 +2097,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             string bodyJson = JsonSerializer.Serialize(body);
 
-            RestResponse response  = ExecuteRequest(_apiPath, bodyJson);
+            IRestResponse response  = ExecuteRequest(_apiPath, bodyJson);
 
             
 
@@ -2248,7 +2248,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             List<Order> orders = new List<Order>();
 
             string _apiPath = "v2/auth/r/orders";
-            RestResponse response = ExecuteRequest(_apiPath);
+            IRestResponse response = ExecuteRequest(_apiPath);
           
             try
             {
@@ -2382,7 +2382,7 @@ namespace OsEngine.Market.Servers.Bitfinex
            
             string bodyJson = JsonSerializer.Serialize(body);
 
-            RestResponse response = ExecuteRequest(_apiPath, bodyJson);
+            IRestResponse response = ExecuteRequest(_apiPath, bodyJson);
 
             
             // Десериализуем ответ
@@ -2444,7 +2444,7 @@ namespace OsEngine.Market.Servers.Bitfinex
                
 
                 string bodyJson = JsonSerializer.Serialize(body);
-                RestResponse response = ExecuteRequest(_apiPath, bodyJson);
+                IRestResponse response = ExecuteRequest(_apiPath, bodyJson);
 
                
                 if (response.StatusCode == HttpStatusCode.OK)
@@ -2539,17 +2539,17 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
-        public  RestResponse ExecuteRequest(string apiPath, string body = null)
+        public  IRestResponse ExecuteRequest(string apiPath, string body = null)
         {
             // Генерация уникального nonce
             string nonce = GetNextNonce();
 
             // Определение метода запроса (POST для авторизованных запросов, GET для других)
-            Method method = apiPath.ToLower().Contains("auth") ? Method.Post : Method.Get;
+            Method method = apiPath.ToLower().Contains("auth") ? Method.POST : Method.GET;
 
             // Формирование строки для подписи
             string signature;
-            if (method == Method.Get)
+            if (method == Method.GET)
             {
                 // Включаем nonce в строку для подписи для GET запросов
                 signature = $"/api/{apiPath}{nonce}";
@@ -2576,7 +2576,7 @@ namespace OsEngine.Market.Servers.Bitfinex
             request.AddHeader("bfx-signature", sig);
 
             // Если это POST запрос, добавляем тело запроса
-            if (method == Method.Post && body != null)
+            if (method == Method.POST && body != null)
             {
                 request.AddParameter("application/json", body, ParameterType.RequestBody);// из-за этой записи не формировался правильно запрос
             }
