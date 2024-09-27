@@ -183,8 +183,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
         public void GetSecurities()
         {
-            //_apiPath = $"v2/ticker/{sec}";
-
+            
             _rateGateGetsecurity.WaitToProceed();
 
             try
@@ -223,14 +222,14 @@ namespace OsEngine.Market.Servers.Bitfinex
                         List<object> item = securityList[i];
 
                         BitfinexSecurity ticker = new BitfinexSecurity();
-
+                        
                         ticker.Symbol = item[0].ToString();
                         ticker.Bid = ConvertScientificNotation(item[1].ToString());
                         ticker.BidSize = ConvertScientificNotation(item[2].ToString());
-                        ticker.Ask = ConvertScientificNotation(item[3].ToString());
+                        ticker.Ask =ConvertScientificNotation(item[3].ToString());
                         ticker.AskSize = ConvertScientificNotation(item[4].ToString());
                         ticker.DailyChange = ConvertScientificNotation(item[5].ToString());
-                        ticker.DailyChangeRelative = ConvertScientificNotation(item[6].ToString()); //double.Parse(item[7].ToString(), System.Globalization.NumberStyles.Float).ToString(),
+                        ticker.DailyChangeRelative =ConvertScientificNotation(item[6].ToString()); //double.TryParse(item[7], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out  dailyChangeRelative).ToString();
                         ticker.LastPrice = ConvertScientificNotation(item[7].ToString());
                         ticker.Volume = ConvertScientificNotation(item[8].ToString());
                         ticker.High = ConvertScientificNotation(item[9].ToString());
@@ -256,16 +255,37 @@ namespace OsEngine.Market.Servers.Bitfinex
             }
         }
 
+        // Функция для конвертации строки в десятичное представление и конвертации строки с научной нотацией
+        public static string ConvertScientificNotation(string value)
+        {
+            double result;
+
+            // Заменяем запятую на точку, если есть
+            value = value.Replace(",", ".");
+
+            // Пытаемся преобразовать строку в число типа double
+            if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result))
+            {
+                // Преобразуем в строку с десятичным представлением с 8 знаками после запятой
+                return result.ToString("F8", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Если строка не является числом, возвращаем "0.000000000000000"
+            return "0.00000000"; // Или любое другое значение по умолчанию
+        }
+
+
+
 
         // Метод для преобразования строки в decimal с учетом научной нотации
-        private string ConvertScientificNotation(string value)
-        {
-            // Преобразование строки в decimal с учетом научной нотации
-            return decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal result)
-                ? result.ToString(CultureInfo.InvariantCulture)
-                : value;
+        //private string ConvertScientificNotation(string value)
+        //{
+        //    // Преобразование строки в decimal с учетом научной нотации
+        //    return decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal result)
+        //        ? result.ToString(CultureInfo.InvariantCulture)
+        //        : value;
 
-        }
+        //}
 
         private void UpdateSecurity(string json)
         {
@@ -480,7 +500,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         public List<Candle> GetLastCandleHistory(Security security, TimeFrameBuilder timeFrameBuilder, int candleCount)
         {
             DateTime startTime = DateTime.UtcNow - TimeSpan.FromMinutes(timeFrameBuilder.TimeFrameTimeSpan.Minutes * candleCount);
-            DateTime endTime = DateTime.UtcNow; //DateTime.UtcNow.AddMilliseconds(-10);
+            DateTime endTime = DateTime.UtcNow; 
             DateTime actualTime = startTime;
 
             return GetCandleDataToSecurity(security, timeFrameBuilder, startTime, endTime, actualTime);////////////
