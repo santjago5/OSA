@@ -480,7 +480,7 @@ namespace OsEngine.Market.Servers.Bitfinex
         public List<Candle> GetLastCandleHistory(Security security, TimeFrameBuilder timeFrameBuilder, int candleCount)
         {
             DateTime startTime = DateTime.UtcNow - TimeSpan.FromMinutes(timeFrameBuilder.TimeFrameTimeSpan.Minutes * candleCount);
-            DateTime endTime = DateTime.UtcNow.AddMilliseconds(-10);
+            DateTime endTime = DateTime.UtcNow; //DateTime.UtcNow.AddMilliseconds(-10);
             DateTime actualTime = startTime;
 
             return GetCandleDataToSecurity(security, timeFrameBuilder, startTime, endTime, actualTime);////////////
@@ -592,8 +592,8 @@ namespace OsEngine.Market.Servers.Bitfinex
             //string endTime = Convert.ToInt64(endTimeMilliseconds).ToString();
 
 
-            //Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
-            //Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
+           string startTime = Convert.ToInt64((timeFrom - yearBegin).TotalMilliseconds).ToString();
+            string endTime= Convert.ToInt64((timeTo - yearBegin).TotalMilliseconds).ToString();
 
 
             ///
@@ -605,7 +605,7 @@ namespace OsEngine.Market.Servers.Bitfinex
 
             string candle = $"trade:{tf}:{nameSec}";
 
-            string _apiPath = $"/v2/candles/{candle}/hist";//?start={startTime}&end={endTime}";
+            string _apiPath = $"/v2/candles/{candle}/hist?start={startTime}&end={endTime}";
             IRestResponse response = ExecuteRequest(_apiPath);
 
             try
@@ -2507,12 +2507,12 @@ namespace OsEngine.Market.Servers.Bitfinex
 
 
         // Глобальный счетчик nonce
-        private static long _lastNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); // Начальное значение - текущее время в миллисекундах
-        private static readonly object _nonceLock = new object();
+        private  long _lastNonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); // Начальное значение - текущее время в миллисекундах
+        private  readonly object _nonceLock = new object();
         private const long MaxNonceValue = 9007199254740991; // Максимальное допустимое значение nonce
 
         // Метод для получения следующего nonce
-        public static string GetNextNonce()
+        public  string GetNextNonce()
         {
             lock (_nonceLock)
             {
